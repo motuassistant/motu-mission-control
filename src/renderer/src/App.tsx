@@ -1,35 +1,61 @@
-import Versions from './components/Versions'
-import electronLogo from './assets/electron.svg'
+import { MemoryRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import Sidebar from './components/Sidebar'
+import TopBar from './components/TopBar'
+import Dashboard from './pages/Dashboard'
+import Workshop from './pages/Workshop'
+import Journal from './pages/Journal'
+import Documents from './pages/Documents'
+import Agents from './pages/Agents'
+import Intelligence from './pages/Intelligence'
+import WeeklyRecaps from './pages/WeeklyRecaps'
+import Clients from './pages/Clients'
+import CronJobs from './pages/CronJobs'
+import ApiUsage from './pages/ApiUsage'
+import TheHub from './pages/TheHub'
+import './assets/main.css'
 
-function App(): React.JSX.Element {
-  const ipcHandle = (): void => window.electron.ipcRenderer.send('ping')
+const SEARCH_LABELS: Record<string, string> = {
+  '/dashboard':     'Search dashboard...',
+  '/workshop':      'Search tasks...',
+  '/hub':           'Search messages...',
+  '/agents':        'Search agents...',
+  '/clients':       'Search clients...',
+  '/journal':       'Search journal...',
+  '/cron-jobs':     'Search cron jobs...'
+}
 
+function AppShell(): React.JSX.Element {
+  const location = useLocation()
   return (
-    <>
-      <img alt="logo" className="logo" src={electronLogo} />
-      <div className="creator">Powered by electron-vite</div>
-      <div className="text">
-        Build an Electron app with <span className="react">React</span>
-        &nbsp;and <span className="ts">TypeScript</span>
+    <div className="app-shell">
+      <Sidebar />
+      <div className="main-wrapper">
+        <TopBar searchPlaceholder={SEARCH_LABELS[location.pathname] ?? 'Search...'} />
+        <main className="main-content">
+          <Routes>
+            <Route path="/"               element={<Navigate to="/dashboard" replace />} />
+            <Route path="/dashboard"      element={<Dashboard />} />
+            <Route path="/journal"        element={<Journal />} />
+            <Route path="/documents"      element={<Documents />} />
+            <Route path="/agents"         element={<Agents />} />
+            <Route path="/intelligence"   element={<Intelligence />} />
+            <Route path="/weekly-recaps"  element={<WeeklyRecaps />} />
+            <Route path="/clients"        element={<Clients />} />
+            <Route path="/cron-jobs"      element={<CronJobs />} />
+            <Route path="/api-usage"      element={<ApiUsage />} />
+            <Route path="/workshop"       element={<Workshop />} />
+            <Route path="/hub"            element={<TheHub />} />
+          </Routes>
+        </main>
       </div>
-      <p className="tip">
-        Please try pressing <code>F12</code> to open the devTool
-      </p>
-      <div className="actions">
-        <div className="action">
-          <a href="https://electron-vite.org/" target="_blank" rel="noreferrer">
-            Documentation
-          </a>
-        </div>
-        <div className="action">
-          <a target="_blank" rel="noreferrer" onClick={ipcHandle}>
-            Send IPC
-          </a>
-        </div>
-      </div>
-      <Versions></Versions>
-    </>
+    </div>
   )
 }
 
-export default App
+export default function App(): React.JSX.Element {
+  return (
+    <Router>
+      <AppShell />
+    </Router>
+  )
+}
