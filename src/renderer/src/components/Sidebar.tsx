@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useState, useEffect } from 'react'
-import { getTasks, type Task } from '../lib/api'
+import { getTasks, getStatus, type Task, type AgentStatus } from '../lib/api'
 
 const NAV = [
   {
@@ -35,29 +35,34 @@ export default function Sidebar(): React.JSX.Element {
   const navigate = useNavigate()
   const location = useLocation()
   const [queueCount, setQueueCount] = useState(0)
+  const [status, setStatus] = useState<AgentStatus | null>(null)
 
   useEffect(() => {
-    const load = () =>
+    const load = () => {
       getTasks()
-        .then((tasks: Task[]) =>
-          setQueueCount(tasks.filter((t) => t.status === 'queued').length)
-        )
+        .then((tasks: Task[]) => setQueueCount(tasks.filter((t) => t.status === 'queued').length))
         .catch(console.error)
+      getStatus().then(setStatus).catch(console.error)
+    }
     load()
-    const i = setInterval(load, 15000)
+    const i = setInterval(load, 8000)
     return () => clearInterval(i)
   }, [])
+
+  const isActive = status?.status === 'active'
 
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
         <div className="agent-avatar-wrap">
           <div className="agent-avatar">🤖</div>
-          <div className="agent-avatar-dot" />
+          <div className={`agent-avatar-dot ${isActive ? 'active' : ''}`} />
         </div>
         <div className="agent-info">
           <div className="agent-name">Motu</div>
-          <div className="agent-role">Commander · Idle</div>
+          <div className="agent-role">
+            Commander · {isActive ? 'Active' : 'Idle'}
+          </div>
         </div>
       </div>
 

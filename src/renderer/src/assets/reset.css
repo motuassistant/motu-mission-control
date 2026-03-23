@@ -1,0 +1,64 @@
+/* ============================================================
+   MOTU MISSION CONTROL — RESET & BASE
+   Body, elements, scrollbars, ambient background
+   Never needs editing unless changing base element behavior
+   ============================================================ */
+
+@import './tokens.css';
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html, body, #root { height: 100%; overflow: hidden; }
+
+body {
+  background: var(--gh-base);
+  color: var(--gh-text-1);
+  font-family: var(--font);
+  font-size: 12.5px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+ul  { list-style: none; }
+button { cursor: pointer; border: none; background: none; font-family: inherit; color: inherit; }
+input, textarea, select { font-family: inherit; color: inherit; }
+a { text-decoration: none; color: inherit; }
+
+/* Ambient depth glow — matches the GitHub Dark Colorblind feel */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 80% 60% at 5%   0%,   rgba(88, 166, 255, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 50% at 95%  100%, rgba(188, 140, 255, 0.04) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 50%  120%, rgba(247, 129, 102, 0.03) 0%, transparent 50%);
+}
+
+#root { position: relative; z-index: 1; }
+
+/* Thin scrollbars everywhere */
+* { scrollbar-width: thin; scrollbar-color: var(--gh-border) transparent; }
+*::-webkit-scrollbar { width: 4px; height: 4px; }
+*::-webkit-scrollbar-track { background: transparent; }
+*::-webkit-scrollbar-thumb { background: var(--gh-border); border-radius: var(--r-full); }
+
+/* Animations — defined once, used everywhere via class */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.anim-in   { animation: fadeSlideUp var(--t-slow) var(--ease) both; }
+.anim-in-2 { animation: fadeSlideUp var(--t-slow) var(--ease) 60ms  both; }
+.anim-in-3 { animation: fadeSlideUp var(--t-slow) var(--ease) 120ms both; }
+.anim-in-4 { animation: fadeSlideUp var(--t-slow) var(--ease) 180ms both; }

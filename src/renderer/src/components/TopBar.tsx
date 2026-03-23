@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { getStatus, type AgentStatus } from '../lib/api'
+import { useSearch } from '../lib/SearchContext'
 
 function useCountdown(seconds: number): string {
   const [rem, setRem] = useState(seconds)
@@ -13,35 +14,45 @@ function useCountdown(seconds: number): string {
 }
 
 interface TopBarProps {
-  onSearch?: (q: string) => void
   searchPlaceholder?: string
+  searchDisabled?: boolean
   actions?: React.ReactNode
 }
 
 export default function TopBar({
-  onSearch,
   searchPlaceholder = 'Search...',
+  searchDisabled = false,
   actions
 }: TopBarProps): React.JSX.Element {
   const [status, setStatus] = useState<AgentStatus | null>(null)
-  const [query, setQuery] = useState('')
   const countdown = useCountdown(1800)
+  const { query, setQuery } = useSearch()
 
   useEffect(() => {
     getStatus().then(setStatus).catch(console.error)
-    const i = setInterval(() => getStatus().then(setStatus).catch(console.error), 15000)
+    const i = setInterval(() => getStatus().then(setStatus).catch(console.error), 8000)
     return () => clearInterval(i)
   }, [])
 
   return (
     <div className="topbar">
-      <div className="topbar-search">
+      <div className={`topbar-search ${searchDisabled ? 'topbar-search-disabled' : ''}`}>
         <span className="topbar-search-icon">⌕</span>
         <input
-          placeholder={searchPlaceholder}
+          placeholder={searchDisabled ? 'No search on this page' : searchPlaceholder}
           value={query}
-          onChange={(e) => { setQuery(e.target.value); onSearch?.(e.target.value) }}
+          onChange={(e) => !searchDisabled && setQuery(e.target.value)}
+          disabled={searchDisabled}
+          style={{ opacity: searchDisabled ? 0.4 : 1 }}
         />
+        {query && !searchDisabled && (
+          <button
+            onClick={() => setQuery('')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--gh-text-4)', fontSize: 11, padding: 0, lineHeight: 1 }}
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       <div className="topbar-spacer" />

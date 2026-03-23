@@ -15,11 +15,9 @@ function timeAgo(d: string): string {
   return `${Math.floor(h / 24)}d ago`
 }
 
-const EVENT_COLORS: Record<string, string> = {
-  info: 'var(--gh-blue)',
-  success: 'var(--gh-teal)',
-  warn: 'var(--gh-yellow)',
-  error: 'var(--gh-orange)'
+const DOT_COLORS: Record<string, string> = {
+  info: 'var(--gh-blue)', success: 'var(--gh-teal)',
+  warn: 'var(--gh-yellow)', error: 'var(--gh-orange)'
 }
 
 export default function Dashboard(): React.JSX.Element {
@@ -29,15 +27,15 @@ export default function Dashboard(): React.JSX.Element {
   const [events, setEvents]   = useState<SystemEvent[]>([])
   const [tasks, setTasks]     = useState<Task[]>([])
 
-  useEffect(() => {
+  function load() {
     Promise.all([getStatus(), getCommits(), getEvents(), getTasks()])
       .then(([s, c, e, t]) => { setStatus(s); setCommits(c); setEvents(e); setTasks(t) })
       .catch(console.error)
+  }
 
-    const i = setInterval(() => {
-      getStatus().then(setStatus).catch(console.error)
-      getTasks().then(setTasks).catch(console.error)
-    }, 10000)
+  useEffect(() => {
+    load()
+    const i = setInterval(load, 8000)
     return () => clearInterval(i)
   }, [])
 
@@ -50,10 +48,10 @@ export default function Dashboard(): React.JSX.Element {
   return (
     <div className="page" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)' }}>
 
-      {/* ── Row 1: Status + Workshop ── */}
+      {/* Row 1 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-4)' }}>
 
-        {/* Agent Status Card */}
+        {/* Agent status */}
         <div className="glass-card anim-in" style={{ padding: 'var(--sp-5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-4)' }}>
             <span className={`badge badge-${statusKey}`}>{statusKey}</span>
@@ -62,7 +60,6 @@ export default function Dashboard(): React.JSX.Element {
             </span>
           </div>
 
-          {/* Current activity */}
           <div style={{ marginBottom: 'var(--sp-4)' }}>
             <div style={{ fontSize: 10, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700, marginBottom: 4 }}>
               Current Activity
@@ -72,41 +69,24 @@ export default function Dashboard(): React.JSX.Element {
             </div>
           </div>
 
-          {/* Bandwidth bar */}
           <div style={{ marginBottom: 'var(--sp-4)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-              <span style={{ fontSize: 10, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>
-                Bandwidth
-              </span>
-              <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--gh-text-2)' }}>
-                {status?.bandwidth ?? 0}%
-              </span>
+              <span style={{ fontSize: 10, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.08em', fontWeight: 700 }}>Bandwidth</span>
+              <span style={{ fontSize: 11, fontFamily: 'var(--font-mono)', color: 'var(--gh-text-2)' }}>{status?.bandwidth ?? 0}%</span>
             </div>
-            <div style={{ height: 3, background: 'rgba(255,255,255,0.06)', borderRadius: 'var(--r-full)', overflow: 'hidden' }}>
-              <div style={{
-                height: '100%',
-                width: `${status?.bandwidth ?? 0}%`,
-                background: 'linear-gradient(90deg, var(--gh-blue), var(--gh-purple))',
-                borderRadius: 'var(--r-full)',
-                transition: 'width 0.6s var(--ease)',
-                boxShadow: '0 0 8px rgba(88,166,255,0.4)'
-              }} />
+            <div className="progress-track">
+              <div className="progress-fill" style={{ width: `${status?.bandwidth ?? 0}%` }} />
             </div>
           </div>
 
-          {/* Stats grid */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-3)', marginBottom: 'var(--sp-4)' }}>
             {[
-              { label: 'Load',        value: 'Low',                          sub: '50 BPM',   color: 'var(--gh-teal)' },
+              { label: 'Load',        value: 'Low',  sub: '50 BPM',   color: 'var(--gh-teal)' },
               { label: 'Last Active', value: status ? timeAgo(status.last_active) : '—', sub: 'heartbeat', color: 'var(--gh-blue)' }
             ].map((s) => (
               <div key={s.label} className="inset-card" style={{ padding: 'var(--sp-3)' }}>
-                <div style={{ fontSize: 9, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: 4 }}>
-                  {s.label}
-                </div>
-                <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-mono)', color: s.color, lineHeight: 1 }}>
-                  {s.value}
-                </div>
+                <div style={{ fontSize: 9, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: 4 }}>{s.label}</div>
+                <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--font-mono)', color: s.color, lineHeight: 1 }}>{s.value}</div>
                 <div style={{ fontSize: 9, color: 'var(--gh-text-4)', marginTop: 3 }}>{s.sub}</div>
               </div>
             ))}
@@ -118,10 +98,10 @@ export default function Dashboard(): React.JSX.Element {
           </div>
         </div>
 
-        {/* Workshop Stats */}
+        {/* Workshop stats */}
         <div className="glass-card anim-in-2" style={{ padding: 'var(--sp-5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-4)' }}>
-            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em', color: 'var(--gh-text-1)' }}>Workshop</span>
+            <span style={{ fontSize: 14, fontWeight: 700, letterSpacing: '-0.02em' }}>Workshop</span>
             <button className="btn btn-ghost" style={{ fontSize: 11, padding: '4px 10px' }} onClick={() => navigate('/workshop')}>
               Open →
             </button>
@@ -129,76 +109,52 @@ export default function Dashboard(): React.JSX.Element {
 
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--sp-3)', marginBottom: 'var(--sp-4)' }}>
             {[
-              { label: 'Queued',    num: queued.length,    color: 'var(--gh-yellow)' },
-              { label: 'Active',    num: active.length,    color: 'var(--gh-teal)' },
-              { label: 'Completed', num: completed.length, color: 'var(--gh-blue)' }
+              { label: 'Queued', num: queued.length,    color: 'var(--gh-yellow)' },
+              { label: 'Active', num: active.length,    color: 'var(--gh-teal)' },
+              { label: 'Done',   num: completed.length, color: 'var(--gh-blue)' }
             ].map((s) => (
               <div key={s.label} className="inset-card" style={{ padding: 'var(--sp-3)', textAlign: 'center' }}>
-                <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-mono)', color: s.color, lineHeight: 1, letterSpacing: '-0.04em' }}>
-                  {s.num}
-                </div>
-                <div style={{ fontSize: 9, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginTop: 4 }}>
-                  {s.label}
-                </div>
+                <div style={{ fontSize: 28, fontWeight: 700, fontFamily: 'var(--font-mono)', color: s.color, lineHeight: 1, letterSpacing: '-0.04em', textShadow: `0 0 12px ${s.color}40` }}>{s.num}</div>
+                <div style={{ fontSize: 9, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginTop: 4 }}>{s.label}</div>
               </div>
             ))}
           </div>
 
           <div className="inset-card" style={{ padding: 'var(--sp-3)' }}>
-            <div style={{ fontSize: 9, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: 6 }}>
-              Next for Motu
-            </div>
+            <div style={{ fontSize: 9, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: 6 }}>Next for Motu</div>
             {nextTask ? (
               <>
-                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--gh-text-1)', marginBottom: 6, letterSpacing: '-0.01em' }}>
-                  {nextTask.title}
-                </div>
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--gh-text-1)', marginBottom: 6, letterSpacing: '-0.01em' }}>{nextTask.title}</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
                   {nextTask.momentum > 0 && <span className="momentum">↑{nextTask.momentum}%</span>}
-                  <span style={{ fontSize: 10, color: 'var(--gh-text-4)' }}>
-                    queued · {new Date(nextTask.created_at).toLocaleDateString()}
-                  </span>
+                  <span style={{ fontSize: 10, color: 'var(--gh-text-4)' }}>queued · {new Date(nextTask.created_at).toLocaleDateString()}</span>
                 </div>
               </>
             ) : (
-              <div style={{ fontSize: 12, color: 'var(--gh-text-4)', fontStyle: 'italic' }}>
-                No tasks queued
-              </div>
+              <div style={{ fontSize: 12, color: 'var(--gh-text-4)', fontStyle: 'italic' }}>No tasks queued</div>
             )}
           </div>
         </div>
       </div>
 
-      {/* ── Row 2: Commits + Events ── */}
+      {/* Row 2 */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-4)' }}>
 
-        {/* Recent Commits */}
+        {/* Recent commits */}
         <div className="glass-card anim-in-3" style={{ padding: 'var(--sp-5)' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--gh-text-1)', marginBottom: 'var(--sp-4)' }}>
-            Recent Commits
-          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em', marginBottom: 'var(--sp-4)' }}>Recent Commits</div>
           {commits.length === 0 ? (
-            <div className="empty-state"><span className="empty-icon">📭</span><span className="empty-text">No commits yet</span></div>
+            <div className="empty-state"><span className="empty-icon">📭</span><span className="empty-text">No commits yet. Complete a task to see commits here.</span></div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-              {commits.slice(0, 5).map((c) => (
+              {commits.slice(0, 6).map((c) => (
                 <div key={c.id} className="inset-card" style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-3)', padding: 'var(--sp-3)' }}>
-                  <div style={{
-                    width: 22, height: 22, borderRadius: 6, flexShrink: 0,
-                    background: 'linear-gradient(135deg, var(--gh-blue), var(--gh-purple))',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 10, fontWeight: 800, color: '#0d1117',
-                    boxShadow: '0 0 8px rgba(88,166,255,0.25)'
-                  }}>
+                  <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0, background: 'linear-gradient(135deg, var(--gh-blue), var(--gh-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: '#0d1117', boxShadow: '0 0 8px rgba(88,166,255,0.25)' }}>
                     {c.author.charAt(0).toUpperCase()}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 11.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--gh-text-1)' }}>
-                      {c.message}
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-                      {c.author} · {timeAgo(c.created_at)}
-                    </div>
+                    <div style={{ fontSize: 11.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.message}</div>
+                    <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>{c.author} · {timeAgo(c.created_at)}</div>
                   </div>
                 </div>
               ))}
@@ -206,28 +162,19 @@ export default function Dashboard(): React.JSX.Element {
           )}
         </div>
 
-        {/* System Events */}
+        {/* System events */}
         <div className="glass-card anim-in-4" style={{ padding: 'var(--sp-5)' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em', color: 'var(--gh-text-1)', marginBottom: 'var(--sp-4)' }}>
-            System Events
-          </div>
+          <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em', marginBottom: 'var(--sp-4)' }}>System Events</div>
           {events.length === 0 ? (
             <div className="empty-state"><span className="empty-icon">📡</span><span className="empty-text">No events yet</span></div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-              {events.slice(0, 6).map((e) => (
+              {events.slice(0, 7).map((e) => (
                 <div key={e.id} className="inset-card" style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-2)', padding: 'var(--sp-3)' }}>
-                  <div style={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: EVENT_COLORS[e.type] ?? 'var(--gh-blue)',
-                    marginTop: 4, flexShrink: 0,
-                    boxShadow: `0 0 5px ${EVENT_COLORS[e.type] ?? 'var(--gh-blue)'}`
-                  }} />
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: DOT_COLORS[e.type] ?? 'var(--gh-blue)', marginTop: 4, flexShrink: 0, boxShadow: `0 0 5px ${DOT_COLORS[e.type] ?? 'var(--gh-blue)'}` }} />
                   <div>
                     <div style={{ fontSize: 11.5, color: 'var(--gh-text-2)', lineHeight: 1.4 }}>{e.text}</div>
-                    <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>
-                      {new Date(e.created_at).toLocaleTimeString()}
-                    </div>
+                    <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 2, fontFamily: 'var(--font-mono)' }}>{new Date(e.created_at).toLocaleTimeString()}</div>
                   </div>
                 </div>
               ))}

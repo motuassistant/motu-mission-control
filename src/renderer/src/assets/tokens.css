@@ -1,0 +1,86 @@
+/* ============================================================
+   MOTU MISSION CONTROL — DESIGN TOKENS
+   Edit this file to change colors, spacing, fonts, motion
+   ============================================================ */
+
+:root {
+  /* ── GitHub Dark Colorblind palette ── */
+  --gh-base:         #0d1117;
+  --gh-surface:      #161b22;
+  --gh-elevated:     #21262d;
+  --gh-overlay:      #2d333b;
+  --gh-border:       #30363d;
+  --gh-border-muted: #21262d;
+
+  /* ── Text ── */
+  --gh-text-1: #e6edf3;
+  --gh-text-2: #8b949e;
+  --gh-text-3: #6e7681;
+  --gh-text-4: #484f58;
+
+  /* ── Accent colors (colorblind-safe) ── */
+  --gh-blue:   #58a6ff;
+  --gh-orange: #f78166;
+  --gh-yellow: #e3b341;
+  --gh-teal:   #39d353;
+  --gh-purple: #bc8cff;
+  --gh-pink:   #ff7eb3;
+
+  /* ── Semantic soft variants ── */
+  --blue-soft:    rgba(88, 166, 255, 0.10);
+  --blue-border:  rgba(88, 166, 255, 0.20);
+  --blue-glow:    rgba(88, 166, 255, 0.15);
+
+  --orange-soft:  rgba(247, 129, 102, 0.10);
+  --orange-border:rgba(247, 129, 102, 0.22);
+  --orange-glow:  rgba(247, 129, 102, 0.18);
+
+  --yellow-soft:  rgba(227, 179, 65, 0.10);
+  --yellow-border:rgba(227, 179, 65, 0.22);
+
+  --teal-soft:    rgba(57, 211, 83, 0.08);
+  --teal-border:  rgba(57, 211, 83, 0.18);
+
+  --purple-soft:  rgba(188, 140, 255, 0.10);
+  --purple-border:rgba(188, 140, 255, 0.20);
+
+  /* ── Glass layers ── */
+  --glass-sidebar:   rgba(22, 27, 34, 0.65);
+  --glass-card:      rgba(33, 38, 45, 0.55);
+  --glass-inset:     rgba(13, 17, 23, 0.60);
+  --glass-subtle:    rgba(255, 255, 255, 0.05);
+  --glass-border-lo: rgba(255, 255, 255, 0.05);
+  --glass-border-hi: rgba(255, 255, 255, 0.09);
+  --glass-highlight: rgba(255, 255, 255, 0.09); /* top-edge light source */
+
+  /* ── Spacing scale ── */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* ── Border radius ── */
+  --r-sm:   6px;
+  --r-md:   10px;
+  --r-lg:   14px;
+  --r-xl:   20px;
+  --r-2xl:  26px;
+  --r-full: 9999px;
+
+  /* ── Layout dimensions ── */
+  --sidebar-w: 196px;
+  --topbar-h:  48px;
+
+  /* ── Typography ── */
+  --font:      'Lucida Grande', 'Lucida Sans Unicode', Geneva, Verdana, sans-serif;
+  --font-mono: 'SF Mono', Monaco, Inconsolata, 'Fira Mono', monospace;
+
+  /* ── Motion ── */
+  --ease:   cubic-bezier(0.16, 1, 0.3, 1);
+  --t-fast: 100ms;
+  --t-base: 180ms;
+  --t-slow: 320ms;
+}

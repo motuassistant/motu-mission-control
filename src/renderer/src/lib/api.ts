@@ -25,10 +25,10 @@ export const updateStatus = (data: Partial<AgentStatus>) =>
 
 // ── Tasks ─────────────────────────────────────────────────
 export const getTasks = () =>
-  request<Task[]>('/api/tasks').then((tasks) => tasks.map(parseTask))
+  request<Task[]>('/api/tasks').then((t) => t.map(parseTask))
 
 export const getTasksByStatus = (status: string) =>
-  request<Task[]>(`/api/tasks/status/${status}`).then((tasks) => tasks.map(parseTask))
+  request<Task[]>(`/api/tasks/status/${status}`).then((t) => t.map(parseTask))
 
 export const createTask = (data: Partial<Task>) =>
   request<{ id: number }>('/api/tasks', { method: 'POST', body: JSON.stringify(data) })
@@ -73,20 +73,19 @@ export const deleteCronJob = (id: number) =>
 
 // ── Hub ───────────────────────────────────────────────────
 export const getHubMessages = () => request<AgentMessage[]>('/api/hub')
-export const createHubMessage = (data: {
-  from_agent: string
-  to_agent?: string
-  message: string
-}) => request<{ id: number }>('/api/hub', { method: 'POST', body: JSON.stringify(data) })
+export const createHubMessage = (data: { from_agent: string; to_agent?: string; message: string }) =>
+  request<{ id: number }>('/api/hub', { method: 'POST', body: JSON.stringify(data) })
 
 // ── API Usage ─────────────────────────────────────────────
 export const getUsage = () =>
-  request<{ rows: ApiUsage[]; totals: UsageTotals }>('/api/usage')
+  request<{ rows: ApiUsage[]; totals: UsageTotals; byModel: ModelStat[] }>('/api/usage')
 
 // ── Journal ───────────────────────────────────────────────
 export const getJournal = () => request<JournalEntry[]>('/api/journal')
 export const createJournalEntry = (data: { title: string; content: string }) =>
   request<{ id: number }>('/api/journal', { method: 'POST', body: JSON.stringify(data) })
+export const updateJournalEntry = (id: number, data: { title?: string; content?: string }) =>
+  request('/api/journal/' + id, { method: 'PATCH', body: JSON.stringify(data) })
 export const deleteJournalEntry = (id: number) =>
   request('/api/journal/' + id, { method: 'DELETE' })
 
@@ -94,8 +93,15 @@ export const deleteJournalEntry = (id: number) =>
 export const getClients = () => request<Client[]>('/api/clients')
 export const createClient = (data: Partial<Client>) =>
   request<{ id: number }>('/api/clients', { method: 'POST', body: JSON.stringify(data) })
+export const updateClient = (id: number, data: Partial<Client>) =>
+  request('/api/clients/' + id, { method: 'PATCH', body: JSON.stringify(data) })
 export const deleteClient = (id: number) =>
   request('/api/clients/' + id, { method: 'DELETE' })
+
+// ── Settings ──────────────────────────────────────────────
+export const getSettings = () => request<Record<string, string>>('/api/settings')
+export const updateSettings = (data: Record<string, string>) =>
+  request('/api/settings', { method: 'PATCH', body: JSON.stringify(data) })
 
 // ── Chat ──────────────────────────────────────────────────
 export const chat = (messages: ChatMessage[], model?: string, ollamaHost?: string) =>
@@ -106,121 +112,71 @@ export const chat = (messages: ChatMessage[], model?: string, ollamaHost?: strin
 
 // ── Types ─────────────────────────────────────────────────
 export interface Agent {
-  id: number
-  name: string
-  role: string
-  description: string
-  avatar: string
-  color: string
-  is_commander: number
-  created_at: string
+  id: number; name: string; role: string; description: string
+  avatar: string; color: string; is_commander: number; created_at: string
 }
 
 export interface AgentStatus {
-  id: number
-  status: 'idle' | 'active' | 'busy'
-  current_activity: string
-  bandwidth: number
-  last_active: string
+  id: number; status: 'idle' | 'active' | 'busy'
+  current_activity: string; bandwidth: number; last_active: string
 }
 
 export interface TaskLogEntry {
-  text: string
-  type: 'info' | 'success' | 'warn' | 'error'
-  created_at: string
+  text: string; type: 'info' | 'success' | 'warn' | 'error'; created_at: string
 }
 
 export interface Task {
-  id: number
-  title: string
-  description: string
+  id: number; title: string; description: string
   status: 'queued' | 'active' | 'completed'
-  assigned_to: number
-  agent_name?: string
-  agent_avatar?: string
-  agent_color?: string
-  momentum: number
-  tags: string[]
-  activity_log: TaskLogEntry[]
-  started_at: string | null
-  completed_at: string | null
-  created_at: string
-  updated_at: string
+  assigned_to: number; agent_name?: string; agent_avatar?: string; agent_color?: string
+  momentum: number; tags: string[]; activity_log: TaskLogEntry[]
+  started_at: string | null; completed_at: string | null
+  created_at: string; updated_at: string
 }
 
 export interface Commit {
-  id: number
-  message: string
-  author: string
-  created_at: string
+  id: number; message: string; author: string; created_at: string
 }
 
 export interface SystemEvent {
-  id: number
-  type: 'info' | 'success' | 'warn' | 'error'
-  text: string
-  created_at: string
+  id: number; type: 'info' | 'success' | 'warn' | 'error'; text: string; created_at: string
 }
 
 export interface CronJob {
-  id: number
-  name: string
-  schedule: string
-  description: string
-  enabled: number
-  last_run: string | null
-  next_run: string | null
-  created_at: string
+  id: number; name: string; schedule: string; description: string
+  enabled: number; last_run: string | null; next_run: string | null; created_at: string
 }
 
 export interface AgentMessage {
-  id: number
-  from_agent: string
-  to_agent: string | null
-  message: string
-  created_at: string
+  id: number; from_agent: string; to_agent: string | null; message: string; created_at: string
 }
 
 export interface ApiUsage {
-  id: number
-  model: string
-  prompt_tokens: number
-  completion_tokens: number
-  total_tokens: number
-  estimated_cost: number
-  created_at: string
+  id: number; model: string; prompt_tokens: number; completion_tokens: number
+  total_tokens: number; estimated_cost: number; created_at: string
 }
 
 export interface UsageTotals {
-  total_tokens: number
-  total_cost: number
-  total_calls: number
+  total_tokens: number; total_cost: number; total_calls: number
+}
+
+export interface ModelStat {
+  model: string; tokens: number; calls: number
 }
 
 export interface JournalEntry {
-  id: number
-  title: string
-  content: string
-  created_at: string
+  id: number; title: string; content: string; created_at: string
 }
 
 export interface Client {
-  id: number
-  name: string
-  email: string
-  company: string
-  notes: string
-  created_at: string
+  id: number; name: string; email: string; company: string; notes: string; created_at: string
 }
 
 export interface ChatMessage {
-  role: 'user' | 'assistant' | 'system'
-  content: string
+  role: 'user' | 'assistant' | 'system'; content: string
 }
 
 export interface OllamaResponse {
   message: { role: string; content: string }
-  prompt_eval_count?: number
-  eval_count?: number
-  error?: string
+  prompt_eval_count?: number; eval_count?: number; error?: string
 }

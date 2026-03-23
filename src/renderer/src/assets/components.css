@@ -1,0 +1,435 @@
+/* ============================================================
+   MOTU MISSION CONTROL — COMPONENT PRIMITIVES
+   Reusable classes: cards, buttons, badges, tags, inputs, modal
+   Edit this file to change how UI elements look globally
+   ============================================================ */
+
+/* ── Glass card ─────────────────────────────────────────── */
+/* The signature element: frosted glass with Apple top-edge  */
+/* light highlight simulating a light source from above      */
+.glass-card {
+  background: var(--glass-card);
+  border: 1px solid var(--gh-border);
+  border-radius: var(--r-lg);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    0 1px 3px rgba(0, 0, 0, 0.30),
+    0 4px 16px rgba(0, 0, 0, 0.20);
+  transition:
+    border-color var(--t-base) var(--ease),
+    box-shadow   var(--t-base) var(--ease);
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+/* Inset card — sits inside a glass-card, feels deeper */
+.inset-card {
+  background: var(--glass-inset);
+  border: 1px solid var(--gh-border-muted);
+  border-radius: var(--r-md);
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.40);
+}
+
+/* ── Tags ────────────────────────────────────────────────── */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+}
+
+.tag-blue   { background: var(--blue-soft);   color: var(--gh-blue);   border: 1px solid var(--blue-border); }
+.tag-orange { background: var(--orange-soft); color: var(--gh-orange); border: 1px solid var(--orange-border); }
+.tag-yellow { background: var(--yellow-soft); color: var(--gh-yellow); border: 1px solid var(--yellow-border); }
+.tag-teal   { background: var(--teal-soft);   color: var(--gh-teal);   border: 1px solid var(--teal-border); }
+.tag-purple { background: var(--purple-soft); color: var(--gh-purple); border: 1px solid var(--purple-border); }
+
+/* ── Status badges ───────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 9px;
+  border-radius: var(--r-full);
+  text-transform: capitalize;
+  letter-spacing: 0.02em;
+}
+
+.badge::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.badge-idle      { background: var(--yellow-soft); color: var(--gh-yellow); border: 1px solid var(--yellow-border); }
+.badge-idle::before { background: var(--gh-yellow); }
+
+.badge-active    { background: var(--teal-soft);   color: var(--gh-teal);   border: 1px solid var(--teal-border); }
+.badge-active::before { background: var(--gh-teal); animation: pulse 2s infinite; }
+
+.badge-busy      { background: var(--orange-soft); color: var(--gh-orange); border: 1px solid var(--orange-border); }
+.badge-busy::before { background: var(--gh-orange); animation: pulse 1.5s infinite; }
+
+.badge-queued    { background: var(--yellow-soft); color: var(--gh-yellow); border: 1px solid var(--yellow-border); }
+.badge-queued::before { background: var(--gh-yellow); }
+
+.badge-completed { background: var(--blue-soft);   color: var(--gh-blue);   border: 1px solid var(--blue-border); }
+.badge-completed::before { background: var(--gh-blue); }
+
+/* ── Momentum badge ──────────────────────────────────────── */
+.momentum {
+  font-size: 10px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: var(--gh-orange);
+  background: var(--orange-soft);
+  border: 1px solid var(--orange-border);
+  padding: 2px 7px;
+  border-radius: var(--r-full);
+}
+
+/* ── Buttons ─────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: 6px 13px;
+  border-radius: var(--r-md);
+  font-size: 11.5px;
+  font-weight: 700;
+  font-family: var(--font);
+  white-space: nowrap;
+  letter-spacing: 0.01em;
+  transition: all var(--t-fast) var(--ease);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--gh-border);
+  color: var(--gh-text-2);
+}
+.btn-ghost:hover { background: rgba(255, 255, 255, 0.08); color: var(--gh-text-1); }
+
+.btn-blue {
+  background: var(--blue-soft);
+  border: 1px solid var(--blue-border);
+  color: var(--gh-blue);
+}
+.btn-blue:hover { background: rgba(88, 166, 255, 0.20); }
+
+.btn-orange {
+  background: var(--gh-orange);
+  border: 1px solid rgba(247, 129, 102, 0.80);
+  color: #0d1117;
+  font-weight: 800;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 2px 8px rgba(247, 129, 102, 0.25);
+}
+.btn-orange:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.15),
+    0 4px 14px rgba(247, 129, 102, 0.35);
+}
+
+.btn-teal {
+  background: var(--teal-soft);
+  border: 1px solid var(--teal-border);
+  color: var(--gh-teal);
+}
+.btn-teal:hover { background: rgba(57, 211, 83, 0.18); }
+
+.btn-red {
+  background: var(--orange-soft);
+  border: 1px solid var(--orange-border);
+  color: var(--gh-orange);
+}
+.btn-red:hover { background: rgba(247, 129, 102, 0.18); }
+
+.btn-purple {
+  background: var(--purple-soft);
+  border: 1px solid var(--purple-border);
+  color: var(--gh-purple);
+}
+.btn-purple:hover { background: rgba(188, 140, 255, 0.18); }
+
+/* ── Form inputs ─────────────────────────────────────────── */
+.input {
+  width: 100%;
+  background: rgba(13, 17, 23, 0.70);
+  border: 1px solid var(--gh-border);
+  border-radius: var(--r-md);
+  padding: 8px var(--sp-3);
+  font-size: 12.5px;
+  font-family: var(--font);
+  color: var(--gh-text-1);
+  outline: none;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.30);
+  transition:
+    border-color var(--t-fast) var(--ease),
+    box-shadow   var(--t-fast) var(--ease);
+}
+
+.input:focus {
+  border-color: var(--gh-blue);
+  box-shadow:
+    inset 0 1px 4px rgba(0, 0, 0, 0.30),
+    0 0 0 3px rgba(88, 166, 255, 0.12);
+}
+
+.input::placeholder { color: var(--gh-text-4); }
+
+.textarea {
+  width: 100%;
+  background: rgba(13, 17, 23, 0.70);
+  border: 1px solid var(--gh-border);
+  border-radius: var(--r-md);
+  padding: 8px var(--sp-3);
+  font-size: 12.5px;
+  font-family: var(--font);
+  color: var(--gh-text-1);
+  outline: none;
+  resize: vertical;
+  min-height: 80px;
+  line-height: 1.6;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.30);
+  transition:
+    border-color var(--t-fast) var(--ease),
+    box-shadow   var(--t-fast) var(--ease);
+}
+
+.textarea:focus {
+  border-color: var(--gh-blue);
+  box-shadow:
+    inset 0 1px 4px rgba(0, 0, 0, 0.30),
+    0 0 0 3px rgba(88, 166, 255, 0.12);
+}
+
+.textarea::placeholder { color: var(--gh-text-4); }
+
+.form-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--gh-text-3);
+  margin-bottom: var(--sp-2);
+}
+
+/* ── Select ──────────────────────────────────────────────── */
+.select {
+  width: 100%;
+  background: rgba(13, 17, 23, 0.70);
+  border: 1px solid var(--gh-border);
+  border-radius: var(--r-md);
+  padding: 8px var(--sp-3);
+  font-size: 12.5px;
+  font-family: var(--font);
+  color: var(--gh-text-1);
+  outline: none;
+  cursor: pointer;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.30);
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23484f58' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 28px;
+}
+
+.select:focus { border-color: var(--gh-blue); }
+
+/* ── Modal ───────────────────────────────────────────────── */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(1, 4, 9, 0.75);
+  backdrop-filter: blur(10px) saturate(150%);
+  -webkit-backdrop-filter: blur(10px) saturate(150%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: var(--sp-6);
+  animation: fadeIn var(--t-base) var(--ease) both;
+}
+
+.modal {
+  background: rgba(22, 27, 34, 0.92);
+  border: 1px solid var(--gh-border);
+  border-radius: var(--r-2xl);
+  width: 100%;
+  max-width: 540px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(24px) saturate(200%);
+  -webkit-backdrop-filter: blur(24px) saturate(200%);
+  box-shadow:
+    inset 0 1px 0 var(--glass-highlight),
+    0 0 0 1px rgba(255, 255, 255, 0.04),
+    0 24px 60px rgba(0, 0, 0, 0.70),
+    0 0 80px rgba(88, 166, 255, 0.04);
+  overflow: hidden;
+  animation: fadeSlideUp var(--t-slow) var(--ease) both;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: var(--sp-5) var(--sp-5) 0;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--gh-text-1);
+}
+
+.modal-close {
+  width: 24px;
+  height: 24px;
+  border-radius: var(--r-md);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--gh-border);
+  color: var(--gh-text-3);
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--t-fast);
+  flex-shrink: 0;
+}
+.modal-close:hover { background: rgba(255, 255, 255, 0.10); color: var(--gh-text-1); }
+
+.modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.modal-footer {
+  padding: var(--sp-4) var(--sp-5);
+  border-top: 1px solid var(--gh-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  flex-shrink: 0;
+  background: rgba(13, 17, 23, 0.30);
+}
+
+.modal-footer-right {
+  display: flex;
+  gap: var(--sp-2);
+  margin-left: auto;
+}
+
+/* ── Info box (used in forms for hints) ──────────────────── */
+.info-box {
+  background: var(--blue-soft);
+  border: 1px solid var(--blue-border);
+  border-radius: var(--r-md);
+  padding: var(--sp-3);
+  font-size: 11px;
+  color: var(--gh-blue);
+  line-height: 1.5;
+  box-shadow: inset 0 1px 0 rgba(88, 166, 255, 0.08);
+}
+
+/* ── Empty state ─────────────────────────────────────────── */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-3);
+  padding: var(--sp-8) var(--sp-6);
+  color: var(--gh-text-3);
+  text-align: center;
+}
+
+.empty-icon { font-size: 26px; opacity: 0.40; }
+.empty-text { font-size: 12px; line-height: 1.6; max-width: 200px; }
+
+/* ── Divider ─────────────────────────────────────────────── */
+.divider { height: 1px; background: var(--gh-border); }
+
+/* ── Progress bar ────────────────────────────────────────── */
+.progress-track {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--r-full);
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.40);
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--gh-blue), var(--gh-purple));
+  border-radius: var(--r-full);
+  transition: width 0.6s var(--ease);
+  box-shadow: 0 0 8px rgba(88, 166, 255, 0.40);
+}
+
+/* ── Activity log entry ──────────────────────────────────── */
+.log-entry {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-2);
+}
+
+.log-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.log-dot-info    { background: var(--gh-blue);   box-shadow: 0 0 4px var(--gh-blue); }
+.log-dot-success { background: var(--gh-teal);   box-shadow: 0 0 4px var(--gh-teal); }
+.log-dot-warn    { background: var(--gh-yellow); box-shadow: 0 0 4px var(--gh-yellow); }
+.log-dot-error   { background: var(--gh-orange); box-shadow: 0 0 4px var(--gh-orange); }
+
+.log-text {
+  flex: 1;
+  font-size: 11.5px;
+  color: var(--gh-text-2);
+  line-height: 1.4;
+}
+
+.log-time {
+  font-size: 10px;
+  color: var(--gh-text-4);
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}

@@ -1,4 +1,5 @@
 import { MemoryRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import TopBar from './components/TopBar'
 import Dashboard from './pages/Dashboard'
@@ -12,25 +13,45 @@ import Clients from './pages/Clients'
 import CronJobs from './pages/CronJobs'
 import ApiUsage from './pages/ApiUsage'
 import TheHub from './pages/TheHub'
+import { SearchProvider, useSearch } from './lib/SearchContext'
 import './assets/main.css'
 
-const SEARCH_LABELS: Record<string, string> = {
-  '/dashboard':     'Search dashboard...',
-  '/workshop':      'Search tasks...',
-  '/hub':           'Search messages...',
-  '/agents':        'Search agents...',
-  '/clients':       'Search clients...',
-  '/journal':       'Search journal...',
-  '/cron-jobs':     'Search cron jobs...'
+const SEARCH_PLACEHOLDERS: Record<string, string> = {
+  '/dashboard':    'Search dashboard...',
+  '/workshop':     'Search tasks...',
+  '/hub':          'Search messages...',
+  '/agents':       'Search agents...',
+  '/clients':      'Search clients...',
+  '/journal':      'Search journal...',
+  '/cron-jobs':    'Search cron jobs...',
+  '/api-usage':    'Search usage...',
+  '/intelligence': 'Search intelligence...',
+  '/documents':    'Search documents...'
 }
+
+// Pages that don't support search
+const NO_SEARCH = ['/weekly-recaps', '/api-usage']
 
 function AppShell(): React.JSX.Element {
   const location = useLocation()
+  const { setQuery } = useSearch()
+
+  // Clear search whenever the route changes
+  useEffect(() => {
+    setQuery('')
+  }, [location.pathname, setQuery])
+
+  const placeholder = SEARCH_PLACEHOLDERS[location.pathname] ?? 'Search...'
+  const searchDisabled = NO_SEARCH.includes(location.pathname)
+
   return (
     <div className="app-shell">
       <Sidebar />
       <div className="main-wrapper">
-        <TopBar searchPlaceholder={SEARCH_LABELS[location.pathname] ?? 'Search...'} />
+        <TopBar
+          searchPlaceholder={placeholder}
+          searchDisabled={searchDisabled}
+        />
         <main className="main-content">
           <Routes>
             <Route path="/"               element={<Navigate to="/dashboard" replace />} />
@@ -55,7 +76,9 @@ function AppShell(): React.JSX.Element {
 export default function App(): React.JSX.Element {
   return (
     <Router>
-      <AppShell />
+      <SearchProvider>
+        <AppShell />
+      </SearchProvider>
     </Router>
   )
 }
