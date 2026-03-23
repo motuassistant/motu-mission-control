@@ -21,7 +21,6 @@ const DOT_COLORS: Record<string, string> = {
   warn: 'var(--gh-yellow)', error: 'var(--gh-orange)'
 }
 
-// ── Task Detail Modal ─────────────────────────────────────
 function TaskDetail({ task, onClose, onEdit, onAction, onDelete }: {
   task: Task; onClose: () => void; onEdit: (t: Task) => void
   onAction: (id: number, next: Task['status']) => void; onDelete: (id: number) => void
@@ -91,7 +90,6 @@ function TaskDetail({ task, onClose, onEdit, onAction, onDelete }: {
   )
 }
 
-// ── Task Form Modal ───────────────────────────────────────
 function TaskForm({ task, onClose, onSave }: {
   task?: Task | null; onClose: () => void
   onSave: (d: { title: string; description: string; tags: string[]; momentum: number }) => void
@@ -141,7 +139,6 @@ function TaskForm({ task, onClose, onSave }: {
   )
 }
 
-// ── Kanban ────────────────────────────────────────────────
 function KanbanCard({ task, onClick, onMove }: { task: Task; onClick: (t: Task) => void; onMove: (id: number, s: Task['status']) => void }): React.JSX.Element {
   const dragging = useRef(false)
   const nextMap: Record<Task['status'], Task['status'] | null> = { queued: 'active', active: 'completed', completed: null }
@@ -178,7 +175,7 @@ function KanbanCol({ status, label, tasks, onMove, onClick }: { status: Task['st
       style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)', overflow: 'hidden', background: over ? 'rgba(88,166,255,0.06)' : 'rgba(22,27,34,0.5)', border: `1px solid ${over ? 'var(--gh-blue)' : 'var(--gh-border)'}`, borderRadius: 'var(--r-lg)', padding: 'var(--sp-4)', backdropFilter: 'blur(12px)', boxShadow: over ? '0 0 0 1px rgba(88,166,255,0.1)' : 'inset 0 1px 0 rgba(255,255,255,0.04)', transition: 'all var(--t-fast) var(--ease)' }}
       onDragOver={(e) => { e.preventDefault(); setOver(true) }}
       onDragLeave={() => setOver(false)}
-      onDrop={(e) => { e.preventDefault(); setOver(false); const id = Number(e.dataTransfer.getData('taskId')); const from = e.dataTransfer.getData('fromStatus'); if (from !== status) onMove(id, status) }}
+      onDrop={(e) => { e.preventDefault(); setOver(false); const id = Number(e.dataTransfer.getData('taskId')); const from = e.dataTransfer.getData('fromStatus'); if (from !== status) onMove(id, status as Task['status']) }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)', fontSize: 10, fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--gh-text-3)' }}>
@@ -196,8 +193,7 @@ function KanbanCol({ status, label, tasks, onMove, onClick }: { status: Task['st
   )
 }
 
-// ── Main ─────────────────────────────────────────────────
-type View = 'list' | 'kanban' | 'live'
+type View   = 'list' | 'kanban' | 'live'
 type Filter = 'queued' | 'active' | 'completed'
 
 export default function Workshop(): React.JSX.Element {
@@ -216,22 +212,38 @@ export default function Workshop(): React.JSX.Element {
 
   useEffect(() => { load(); const i = setInterval(load, 8000); return () => clearInterval(i) }, [])
 
-  const queued    = tasks.filter((t) => t.status === 'queued')
-  const active    = tasks.filter((t) => t.status === 'active')
-  const completed = tasks.filter((t) => t.status === 'completed')
+  // Filter helper — applies search query to any task list
+  function applySearch(list: Task[]): Task[] {
+    if (!query) return list
+    const q = query.toLowerCase()
+    return list.filter((t) =>
+      t.title.toLowerCase().includes(q) ||
+      (t.description ?? '').toLowerCase().includes(q) ||
+      t.tags.some((tag) => tag.toLowerCase().includes(q))
+    )
+  }
 
-  // Apply both status filter and topbar search query
-  const filtered = tasks
-    .filter((t) => t.status === filter)
-    .filter((t) => {
-      if (!query) return true
-      const q = query.toLowerCase()
-      return (
-        t.title.toLowerCase().includes(q) ||
-        (t.description ?? '').toLowerCase().includes(q) ||
-        t.tags.some((tag) => tag.toLowerCase().includes(q))
-      )
-    })
+  // Filter helper — applies search query to events
+  function applyEventSearch(list: SystemEvent[]): SystemEvent[] {
+    if (!query) return list
+    const q = query.toLowerCase()
+    return list.filter((e) => e.text.toLowerCase().includes(q))
+  }
+
+  const allQueued    = tasks.filter((t) => t.status === 'queued')
+  const allActive    = tasks.filter((t) => t.status === 'active')
+  const allCompleted = tasks.filter((t) => t.status === 'completed')
+
+  // List view: status filter + search
+  const listFiltered = applySearch(tasks.filter((t) => t.status === filter))
+
+  // Kanban: search applied per column
+  const kanbanQueued    = applySearch(allQueued)
+  const kanbanActive    = applySearch(allActive)
+  const kanbanCompleted = applySearch(allCompleted)
+
+  // Live feed: search applied to events
+  const liveFiltered = applyEventSearch(events)
 
   async function handleMove(id: number, status: Task['status']) {
     await updateTask(id, { status })
@@ -267,7 +279,7 @@ export default function Workshop(): React.JSX.Element {
             <div style={{ fontSize: 11, color: 'var(--gh-text-4)', marginTop: 2 }}>Autonomous work queue &amp; live progress</div>
           </div>
           <div style={{ display: 'flex', gap: 'var(--sp-3)' }}>
-            {[{ label: 'Queued', num: queued.length, color: 'var(--gh-yellow)' }, { label: 'Active', num: active.length, color: 'var(--gh-teal)' }, { label: 'Done', num: completed.length, color: 'var(--gh-blue)' }].map((s) => (
+            {[{ label: 'Queued', num: allQueued.length, color: 'var(--gh-yellow)' }, { label: 'Active', num: allActive.length, color: 'var(--gh-teal)' }, { label: 'Done', num: allCompleted.length, color: 'var(--gh-blue)' }].map((s) => (
               <div key={s.label} className="glass-card" style={{ padding: 'var(--sp-3) var(--sp-4)', minWidth: 68 }}>
                 <div style={{ fontSize: 9, color: 'var(--gh-text-4)', fontWeight: 700, marginBottom: 2, textTransform: 'uppercase', letterSpacing: '0.08em' }}>{s.label}</div>
                 <div style={{ fontSize: 22, fontWeight: 700, fontFamily: 'var(--font-mono)', color: s.color, lineHeight: 1, letterSpacing: '-0.04em', textShadow: `0 0 12px ${s.color}40` }}>{s.num}</div>
@@ -277,9 +289,8 @@ export default function Workshop(): React.JSX.Element {
         </div>
       </div>
 
-      {/* Toolbar — no search input here anymore */}
+      {/* Toolbar */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)', padding: '0 var(--sp-6) var(--sp-4)', borderBottom: '1px solid var(--gh-border)', flexShrink: 0 }}>
-        {/* View toggle */}
         <div style={{ display: 'flex', background: 'rgba(13,17,23,0.5)', border: '1px solid var(--gh-border)', borderRadius: 'var(--r-md)', padding: 3, gap: 2, boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.3)' }}>
           {(['list', 'kanban', 'live'] as View[]).map((v) => (
             <button key={v} onClick={() => setView(v)} style={toolbarBtn(view === v)}>
@@ -288,12 +299,12 @@ export default function Workshop(): React.JSX.Element {
           ))}
         </div>
 
-        {/* Status filter — list view only, no search here */}
+        {/* Status filter — list view only */}
         {view === 'list' && (
           <div style={{ display: 'flex', gap: 'var(--sp-2)' }}>
             {(['queued', 'active', 'completed'] as Filter[]).map((f) => {
               const dotColors: Record<string, string> = { queued: 'var(--gh-yellow)', active: 'var(--gh-teal)', completed: 'var(--gh-blue)' }
-              const counts = { queued: queued.length, active: active.length, completed: completed.length }
+              const counts = { queued: allQueued.length, active: allActive.length, completed: allCompleted.length }
               return (
                 <button key={f} onClick={() => setFilter(f)} style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-1)', padding: '5px 11px', borderRadius: 'var(--r-full)', fontSize: 11, fontWeight: 700, fontFamily: 'var(--font)', background: filter === f ? 'var(--blue-soft)' : 'rgba(255,255,255,0.03)', border: `1px solid ${filter === f ? 'var(--blue-border)' : 'var(--gh-border)'}`, color: filter === f ? 'var(--gh-blue)' : 'var(--gh-text-4)', cursor: 'pointer', transition: 'all var(--t-fast) var(--ease)' }}>
                   <div style={{ width: 6, height: 6, borderRadius: '50%', background: dotColors[f], boxShadow: filter === f ? `0 0 5px ${dotColors[f]}` : 'none' }} />
@@ -305,10 +316,10 @@ export default function Workshop(): React.JSX.Element {
           </div>
         )}
 
-        {/* Search indicator — shows when topbar search is active */}
-        {query && view === 'list' && (
+        {/* Search indicator */}
+        {query && (
           <div style={{ fontSize: 11, color: 'var(--gh-blue)', background: 'var(--blue-soft)', border: '1px solid var(--blue-border)', borderRadius: 'var(--r-full)', padding: '3px 10px' }}>
-            Filtering: "{query}" — {filtered.length} result{filtered.length !== 1 ? 's' : ''}
+            Filtering: "{query}"
           </div>
         )}
 
@@ -320,14 +331,12 @@ export default function Workshop(): React.JSX.Element {
       {/* List view */}
       {view === 'list' && (
         <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--sp-4) var(--sp-6)' }}>
-          {filtered.length === 0 ? (
+          {listFiltered.length === 0 ? (
             <div className="empty-state">
               <span className="empty-icon">📋</span>
-              <span className="empty-text">
-                {query ? `No ${filter} tasks matching "${query}"` : `No ${filter} tasks. ${filter === 'queued' ? 'Add one for Motu.' : ''}`}
-              </span>
+              <span className="empty-text">{query ? `No ${filter} tasks matching "${query}"` : `No ${filter} tasks. ${filter === 'queued' ? 'Add one for Motu.' : ''}`}</span>
             </div>
-          ) : filtered.map((task, idx) => {
+          ) : listFiltered.map((task, idx) => {
             const nextMap: Record<Task['status'], Task['status'] | null> = { queued: 'active', active: 'completed', completed: null }
             const next = nextMap[task.status]
             return (
@@ -354,21 +363,21 @@ export default function Workshop(): React.JSX.Element {
         </div>
       )}
 
-      {/* Kanban */}
+      {/* Kanban — search applied per column */}
       {view === 'kanban' && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--sp-4)', flex: 1, overflow: 'hidden', padding: 'var(--sp-4) var(--sp-6)' }}>
-          <KanbanCol status="queued" label="Queued" tasks={queued} onMove={handleMove} onClick={setDetail} />
-          <KanbanCol status="active" label="Active" tasks={active} onMove={handleMove} onClick={setDetail} />
-          <KanbanCol status="completed" label="Completed" tasks={completed} onMove={handleMove} onClick={setDetail} />
+          <KanbanCol status="queued"    label="Queued"    tasks={kanbanQueued}    onMove={handleMove} onClick={setDetail} />
+          <KanbanCol status="active"    label="Active"    tasks={kanbanActive}    onMove={handleMove} onClick={setDetail} />
+          <KanbanCol status="completed" label="Completed" tasks={kanbanCompleted} onMove={handleMove} onClick={setDetail} />
         </div>
       )}
 
-      {/* Live feed */}
+      {/* Live feed — search filters events */}
       {view === 'live' && (
         <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--sp-4) var(--sp-6)', display: 'flex', flexDirection: 'column', gap: 'var(--sp-2)' }}>
-          {events.length === 0 ? (
-            <div className="empty-state"><span className="empty-icon">📡</span><span className="empty-text">No live events yet.</span></div>
-          ) : events.map((e) => (
+          {liveFiltered.length === 0 ? (
+            <div className="empty-state"><span className="empty-icon">📡</span><span className="empty-text">{query ? `No events matching "${query}"` : 'No live events yet.'}</span></div>
+          ) : liveFiltered.map((e) => (
             <div key={e.id} className="glass-card" style={{ display: 'flex', alignItems: 'flex-start', gap: 'var(--sp-3)', padding: 'var(--sp-3) var(--sp-4)' }}>
               <div style={{ width: 7, height: 7, borderRadius: '50%', background: DOT_COLORS[e.type] ?? 'var(--gh-blue)', marginTop: 4, flexShrink: 0, boxShadow: `0 0 5px ${DOT_COLORS[e.type] ?? 'var(--gh-blue)'}` }} />
               <div style={{ flex: 1, fontSize: 12, color: 'var(--gh-text-2)', lineHeight: 1.5 }}>{e.text}</div>

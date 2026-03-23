@@ -21,7 +21,7 @@ const NAV = [
     ]
   },
   {
-    section: 'BUSINESS',
+    section: 'OPERATIONS',
     items: [
       { label: 'Clients',   icon: '◻', path: '/clients' },
       { label: 'Cron Jobs', icon: '◷', path: '/cron-jobs' },
@@ -61,7 +61,7 @@ export default function Sidebar(): React.JSX.Element {
         <div className="agent-info">
           <div className="agent-name">Motu</div>
           <div className="agent-role">
-            Commander · {isActive ? 'Active' : 'Idle'}
+            Commander · {isActive ? (status?.current_activity ?? 'Active') : 'Idle'}
           </div>
         </div>
       </div>
