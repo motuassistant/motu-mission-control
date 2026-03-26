@@ -1,59 +1,67 @@
 import { useState, useEffect } from 'react'
-import { getUsage, getSettings, updateSettings, getOllamaModels, clearDb, type ApiUsage, type UsageTotals, type ModelStat } from '../lib/api'
+import { getUsage, getOllamaModels, clearDb, updateAgent, type ApiUsage, type UsageTotals, type ModelStat } from '../lib/api'
+import { useSettings } from '../lib/SettingsContext'
 
 export default function ApiUsage(): React.JSX.Element {
-  const [rows, setRows]               = useState<ApiUsage[]>([])
-  const [totals, setTotals]           = useState<UsageTotals | null>(null)
-  const [byModel, setByModel]         = useState<ModelStat[]>([])
-  const [ollamaHost, setOllamaHost]   = useState('')
-  const [model, setModel]             = useState('')
+  const { settings, loaded, saveSettings } = useSettings()
+
+  const [rows, setRows]             = useState<ApiUsage[]>([])
+  const [totals, setTotals]         = useState<UsageTotals | null>(null)
+  const [byModel, setByModel]       = useState<ModelStat[]>([])
+  const [ollamaHost, setOllamaHost] = useState('')
+  const [model, setModel]           = useState('')
   const [availableModels, setAvailableModels] = useState<string[]>([])
   const [modelsLoading, setModelsLoading]     = useState(false)
   const [modelsError, setModelsError]         = useState('')
-  const [saved, setSaved]             = useState(false)
-  const [clearing, setClearing]       = useState(false)
+  const [saved, setSaved]           = useState(false)
+  const [clearing, setClearing]     = useState(false)
   const [clearConfirm, setClearConfirm] = useState(false)
 
-  function load() {
+  // Populate local form state from context once loaded
+  useEffect(() => {
+    if (loaded) {
+      setOllamaHost(settings.ollama_host ?? '')
+      setModel(settings.ollama_model ?? '')
+    }
+  }, [loaded, settings.ollama_host, settings.ollama_model])
+
+  function loadUsage() {
     getUsage().then(({ rows: r, totals: t, byModel: m }) => {
       setRows(r); setTotals(t); setByModel(m)
     }).catch(console.error)
-    getSettings().then((s) => {
-      setOllamaHost(s.ollama_host ?? '')
-      setModel(s.ollama_model ?? '')
-    }).catch(console.error)
   }
 
-  useEffect(() => { load() }, [])
+  useEffect(() => { loadUsage() }, [])
 
   async function fetchModels() {
     setModelsLoading(true)
     setModelsError('')
     try {
-      const { models, error } = await getOllamaModels()
-      if (error) {
+      const { models: m, error: e } = await getOllamaModels()
+      if (e || m.length === 0) {
         setModelsError('Could not reach Ollama — is your beefy PC on?')
         setAvailableModels([])
       } else {
-        setAvailableModels(models)
+        setAvailableModels(m)
       }
     } catch {
       setModelsError('Could not reach Ollama — is your beefy PC on?')
-      setAvailableModels([])
     } finally {
       setModelsLoading(false)
     }
   }
 
-  // Auto-fetch models when host changes, debounced
+  // Auto-fetch models when host changes
   useEffect(() => {
     if (!ollamaHost) return
     const t = setTimeout(fetchModels, 800)
     return () => clearTimeout(t)
   }, [ollamaHost])
 
-  async function saveSettings() {
-    await updateSettings({ ollama_host: ollamaHost, ollama_model: model })
+  async function handleSave() {
+    await saveSettings({ ollama_host: ollamaHost, ollama_model: model })
+    // Also update Motu's model so he uses the new global default
+    await updateAgent(1, { model })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -64,7 +72,7 @@ export default function ApiUsage(): React.JSX.Element {
     try {
       await clearDb()
       setClearConfirm(false)
-      load()
+      loadUsage()
     } finally {
       setClearing(false)
     }
@@ -123,7 +131,16 @@ export default function ApiUsage(): React.JSX.Element {
 
           <div>
             <label className="form-label">Ollama Host (beefy PC IP)</label>
-            <input className="input" style={{ fontFamily: 'var(--font-mono)' }} value={ollamaHost} onChange={(e) => setOllamaHost(e.target.value)} placeholder="http://192.168.1.100:11434" />
+            <input
+              className="input"
+              style={{ fontFamily: 'var(--font-mono)' }}
+              value={ollamaHost}
+              onChange={(e) => setOllamaHost(e.target.value)}
+              placeholder="http://192.168.1.100:11434"
+            />
+            <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 'var(--sp-1)' }}>
+              Save first if you changed the host, then models will refresh
+            </div>
           </div>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-2)' }}>
@@ -137,12 +154,9 @@ export default function ApiUsage(): React.JSX.Element {
                 {modelsLoading ? 'Loading...' : '⟳ Refresh'}
               </button>
             </div>
-
             {availableModels.length > 0 ? (
-              <select className="select" value={model} onChange={(e) => setModel(e.target.value)}>
-                {availableModels.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
+              <select className="select" style={{ fontFamily: 'var(--font-mono)' }} value={model} onChange={(e) => setModel(e.target.value)}>
+                {availableModels.map((m) => <option key={m} value={m}>{m}</option>)}
               </select>
             ) : (
               <input
@@ -161,12 +175,12 @@ export default function ApiUsage(): React.JSX.Element {
             )}
             {availableModels.length > 0 && (
               <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 'var(--sp-1)' }}>
-                {availableModels.length} model{availableModels.length !== 1 ? 's' : ''} available on {ollamaHost}
+                {availableModels.length} model{availableModels.length !== 1 ? 's' : ''} available · also updates Motu's model
               </div>
             )}
           </div>
         </div>
-        <button className={`btn ${saved ? 'btn-teal' : 'btn-orange'}`} onClick={saveSettings}>
+        <button className={`btn ${saved ? 'btn-teal' : 'btn-orange'}`} onClick={handleSave} disabled={!loaded}>
           {saved ? '✓ Saved' : 'Save Settings'}
         </button>
       </div>
@@ -214,8 +228,7 @@ export default function ApiUsage(): React.JSX.Element {
             <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Developer Tools</div>
             <div style={{ fontSize: 11, color: 'var(--gh-text-3)', lineHeight: 1.6 }}>
               Clears all tasks, events, commits, messages, journal entries, cron jobs, and API usage logs.
-              Keeps your settings and the Motu commander agent.
-              <br />
+              Keeps your settings and the Motu commander agent.{' '}
               <span style={{ color: 'var(--gh-orange)', fontWeight: 600 }}>This cannot be undone.</span>
             </div>
           </div>

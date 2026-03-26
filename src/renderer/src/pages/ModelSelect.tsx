@@ -5,36 +5,32 @@ interface ModelSelectProps {
   value: string
   onChange: (model: string) => void
   placeholder?: string
-  fallbackLabel?: string // shown when models can't be fetched
 }
 
-export default function ModelSelect({
-  value,
-  onChange,
-  placeholder = 'Select a model...',
-  fallbackLabel
-}: ModelSelectProps): React.JSX.Element {
-  const [models, setModels]     = useState<string[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [error, setError]       = useState(false)
+export default function ModelSelect({ value, onChange, placeholder = 'Select a model...' }: ModelSelectProps): React.JSX.Element {
+  const [models, setModels]   = useState<string[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError]     = useState(false)
 
   useEffect(() => {
     getOllamaModels()
       .then(({ models: m, error: e }) => {
-        if (e || m.length === 0) {
-          setError(true)
-        } else {
-          setModels(m)
-          // If current value isn't in the list, don't override it —
-          // user may have typed a valid model we just can't reach right now
-        }
+        if (e || m.length === 0) setError(true)
+        else setModels(m)
         setLoading(false)
       })
       .catch(() => { setError(true); setLoading(false) })
   }, [])
 
-  // If we couldn't fetch models, fall back to a plain text input
-  if (error || (models.length === 0 && !loading)) {
+  if (loading) {
+    return (
+      <div className="input" style={{ color: 'var(--gh-text-4)', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ animation: 'pulse 1s infinite' }}>○</span> Fetching models...
+      </div>
+    )
+  }
+
+  if (error || models.length === 0) {
     return (
       <div>
         <input
@@ -42,19 +38,11 @@ export default function ModelSelect({
           style={{ fontFamily: 'var(--font-mono)' }}
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          placeholder={fallbackLabel ?? placeholder}
+          placeholder="Enter model name (e.g. llama3)"
         />
         <div style={{ fontSize: 10, color: 'var(--gh-yellow)', marginTop: 'var(--sp-1)' }}>
           ⚠ Could not fetch models from Ollama — enter model name manually
         </div>
-      </div>
-    )
-  }
-
-  if (loading) {
-    return (
-      <div className="input" style={{ color: 'var(--gh-text-4)', fontFamily: 'var(--font-mono)', display: 'flex', alignItems: 'center', gap: 8 }}>
-        <span style={{ animation: 'pulse 1s infinite' }}>○</span> Fetching models...
       </div>
     )
   }
@@ -66,13 +54,7 @@ export default function ModelSelect({
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >
-      {placeholder && !value && (
-        <option value="" disabled>{placeholder}</option>
-      )}
-      {/* If current value isn't in list (was typed manually), show it too */}
-      {value && !models.includes(value) && (
-        <option value={value}>{value} (custom)</option>
-      )}
+      {!value && <option value="" disabled>{placeholder}</option>}
       {models.map((m) => (
         <option key={m} value={m}>{m}</option>
       ))}

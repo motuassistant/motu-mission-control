@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { getTasks, getCommits, getEvents, chat, getSettings, type Task, type Commit, type SystemEvent } from '../lib/api'
+import { getTasks, getCommits, getEvents, chat, type Task, type Commit, type SystemEvent } from '../lib/api'
+import { useSettings } from '../lib/SettingsContext'
 
 interface Recap {
   id: string
@@ -11,18 +12,15 @@ interface Recap {
 }
 
 export default function WeeklyRecaps(): React.JSX.Element {
-  const [recaps, setRecaps]       = useState<Recap[]>([])
-  const [selected, setSelected]   = useState<Recap | null>(null)
+  const [recaps, setRecaps]         = useState<Recap[]>([])
+  const [selected, setSelected]     = useState<Recap | null>(null)
   const [generating, setGenerating] = useState(false)
-  const [ollamaHost, setOllamaHost] = useState('http://localhost:11434')
-  const [model, setModel]         = useState('llama3')
+  const { settings }                = useSettings()
+
+  const ollamaHost = settings.ollama_host ?? 'http://localhost:11434'
+  const model      = settings.ollama_model ?? 'llama3'
 
   useEffect(() => {
-    getSettings().then((s) => {
-      if (s.ollama_host) setOllamaHost(s.ollama_host)
-      if (s.ollama_model) setModel(s.ollama_model)
-    }).catch(console.error)
-
     try {
       const stored = localStorage.getItem('motu-recaps')
       if (stored) {

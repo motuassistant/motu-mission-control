@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react'
-import { getAgents, createAgent, updateAgent, deleteAgent, getSettings, type Agent } from '../lib/api'
+import { getAgents, createAgent, updateAgent, deleteAgent, type Agent } from '../lib/api'
 import { useSearch } from '../lib/SearchContext'
+import { useSettings } from '../lib/SettingsContext'
 import ModelSelect from './ModelSelect'
 
 const AVATAR_OPTIONS = ['🤖', '🧠', '⚡', '🔬', '🛠️', '📊', '🎯', '🔮', '🌐', '🚀']
 const COLOR_OPTIONS  = ['#58a6ff', '#39d353', '#f78166', '#bc8cff', '#e3b341', '#ff7eb3']
 
+// Full edit modal for non-commander agents
 function AgentModal({ agent, defaultModel, onClose, onSave }: {
   agent?: Agent | null
   defaultModel: string
@@ -47,7 +49,6 @@ function AgentModal({ agent, defaultModel, onClose, onSave }: {
               value={model}
               onChange={setModel}
               placeholder={`Default (${defaultModel})`}
-              fallbackLabel={`Enter model name (default: ${defaultModel})`}
             />
             <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 'var(--sp-1)' }}>
               Override the global model for this agent specifically
@@ -86,25 +87,64 @@ function AgentModal({ agent, defaultModel, onClose, onSave }: {
   )
 }
 
+// Minimal modal for Motu — model only, no other fields editable
+function MotuModelModal({ agent, defaultModel, onClose, onSave }: {
+  agent: Agent; defaultModel: string; onClose: () => void
+  onSave: (data: Partial<Agent>) => void
+}): React.JSX.Element {
+  const [model, setModel] = useState(agent.model ?? defaultModel)
+
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-header">
+          <div className="modal-title">Motu · Model Settings</div>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="info-box">
+            Motu is the commander and cannot be fully edited. You can set his Ollama model here,
+            or update the global default in API Usage which will also update Motu.
+          </div>
+          <div>
+            <label className="form-label">Ollama Model</label>
+            <ModelSelect value={model} onChange={setModel} placeholder={`Default (${defaultModel})`} />
+          </div>
+        </div>
+        <div className="modal-footer">
+          <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
+          <div className="modal-footer-right">
+            <button className="btn btn-orange" onClick={() => onSave({ model: model || defaultModel })}>
+              Save Model
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Agents(): React.JSX.Element {
-  const [agents, setAgents]             = useState<Agent[]>([])
-  const [modal, setModal]               = useState<Agent | null | undefined>(undefined)
-  const [defaultModel, setDefaultModel] = useState('llama3')
-  const { query }                       = useSearch()
+  const [agents, setAgents] = useState<Agent[]>([])
+  const [modal, setModal]   = useState<Agent | null | undefined>(undefined)
+  const [motuModal, setMotuModal] = useState(false)
+  const { query }           = useSearch()
+  const { settings }        = useSettings()
+
+  const defaultModel = settings.ollama_model ?? 'llama3'
 
   function load() { getAgents().then(setAgents).catch(console.error) }
-
-  useEffect(() => {
-    load()
-    getSettings()
-      .then((s) => { if (s.ollama_model) setDefaultModel(s.ollama_model) })
-      .catch(console.error)
-  }, [])
+  useEffect(() => { load() }, [])
 
   async function handleSave(data: Partial<Agent>) {
     if (modal?.id) await updateAgent(modal.id, data)
     else await createAgent(data)
     setModal(undefined); load()
+  }
+
+  async function handleMotuModelSave(data: Partial<Agent>) {
+    await updateAgent(1, data)
+    setMotuModal(false); load()
   }
 
   async function handleDelete(id: number) { await deleteAgent(id); load() }
@@ -118,6 +158,8 @@ export default function Agents(): React.JSX.Element {
       (a.description ?? '').toLowerCase().includes(q)
     )
   })
+
+  const motuAgent = agents.find((a) => a.is_commander)
 
   return (
     <div className="page">
@@ -145,7 +187,10 @@ export default function Agents(): React.JSX.Element {
                 </div>
               </div>
               {agent.is_commander ? (
-                <span className="badge badge-active" style={{ flexShrink: 0 }}>Commander</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-2)' }}>
+                  <span className="badge badge-active" style={{ flexShrink: 0 }}>Commander</span>
+                  <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10 }} onClick={() => setMotuModal(true)}>Model</button>
+                </div>
               ) : (
                 <div style={{ display: 'flex', gap: 'var(--sp-1)' }}>
                   <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: 10 }} onClick={() => setModal(agent)}>Edit</button>
@@ -189,6 +234,10 @@ export default function Agents(): React.JSX.Element {
           onClose={() => setModal(undefined)}
           onSave={handleSave}
         />
+      )}
+
+      {motuModal && motuAgent && (
+        <MotuModelModal agent={motuAgent} defaultModel={defaultModel} onClose={() => setMotuModal(false)} onSave={handleMotuModelSave} />
       )}
     </div>
   )

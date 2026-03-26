@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { getHubMessages, createHubMessage, getAgents, chat, getSettings, type AgentMessage, type Agent } from '../lib/api'
+import { getHubMessages, createHubMessage, getAgents, chat, type AgentMessage, type Agent } from '../lib/api'
 import { useSearch } from '../lib/SearchContext'
+import { useSettings } from '../lib/SettingsContext'
 
 function timeAgo(d: string): string {
   const date = new Date(d.includes('T') ? d : d.replace(' ', 'T') + 'Z')
@@ -18,10 +19,9 @@ export default function TheHub(): React.JSX.Element {
   const [input, setInput]           = useState('')
   const [sending, setSending]       = useState(false)
   const [selectedAgent, setSelectedAgent] = useState('Motu')
-  const [settings, setSettings]           = useState<Record<string, string>>({})
-  const [settingsLoaded, setSettingsLoaded] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const { query } = useSearch()
+  const { settings, loaded }              = useSettings()
 
   // Derived from settings — never use defaults before settings load
   const ollamaHost = settings.ollama_host ?? 'http://localhost:11434'
@@ -33,10 +33,6 @@ export default function TheHub(): React.JSX.Element {
   }
 
   useEffect(() => {
-    // Load settings first, then start polling
-    getSettings()
-      .then((s) => { setSettings(s); setSettingsLoaded(true) })
-      .catch(console.error)
     load()
     const i = setInterval(load, 5000)
     return () => clearInterval(i)
@@ -47,7 +43,7 @@ export default function TheHub(): React.JSX.Element {
   }, [messages, query])
 
   async function sendMessage() {
-    if (!input.trim() || sending || !settingsLoaded) return
+    if (!input.trim() || sending || !loaded) return
     setSending(true)
     const userMsg = input.trim()
     setInput('')
@@ -112,11 +108,11 @@ export default function TheHub(): React.JSX.Element {
   })
 
   const filteredMessages = query
-  ? visibleMessages.filter((m) =>
-      m.message.toLowerCase().includes(query.toLowerCase()) ||
-      m.from_agent.toLowerCase().includes(query.toLowerCase())
-    )
-  : visibleMessages
+    ? visibleMessages.filter((m) =>
+        m.message.toLowerCase().includes(query.toLowerCase()) ||
+        m.from_agent.toLowerCase().includes(query.toLowerCase())
+      )
+    : visibleMessages
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
@@ -146,7 +142,7 @@ export default function TheHub(): React.JSX.Element {
 
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--gh-teal)', fontWeight: 600 }}>
               <span style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--gh-teal)', display: 'inline-block', animation: 'pulse 2s infinite' }} />
-              {settingsLoaded ? 'Connected' : 'Loading...'}
+              {loaded ? 'Connected' : 'Loading...'}
             </div>
           </div>
         </div>
@@ -178,13 +174,7 @@ export default function TheHub(): React.JSX.Element {
 
           return (
             <div key={msg.id} style={{ display: 'flex', gap: 'var(--sp-3)', flexDirection: isUser ? 'row-reverse' : 'row', alignItems: 'flex-start' }}>
-              <div style={{
-                width: 30, height: 30, borderRadius: 'var(--r-md)', flexShrink: 0,
-                background: isUser ? 'var(--gh-elevated)' : `linear-gradient(135deg, ${agentColor}33, ${agentColor}11)`,
-                border: `1px solid ${isUser ? 'var(--gh-border)' : agentColor + '44'}`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 14, boxShadow: isUser ? 'none' : `0 0 10px ${agentColor}22`
-              }}>
+              <div style={{ width: 30, height: 30, borderRadius: 'var(--r-md)', flexShrink: 0, background: isUser ? 'var(--gh-elevated)' : `linear-gradient(135deg, ${agentColor}33, ${agentColor}11)`, border: `1px solid ${isUser ? 'var(--gh-border)' : agentColor + '44'}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, boxShadow: isUser ? 'none' : `0 0 10px ${agentColor}22` }}>
                 {isUser ? '👤' : agents.find((a) => a.name === msg.from_agent)?.avatar ?? '🤖'}
               </div>
               <div style={{ maxWidth: '70%', display: 'flex', flexDirection: 'column', gap: 4, alignItems: isUser ? 'flex-end' : 'flex-start' }}>
@@ -193,15 +183,7 @@ export default function TheHub(): React.JSX.Element {
                   {msg.to_agent && <span style={{ fontSize: 9, color: 'var(--gh-text-4)' }}>→ {msg.to_agent}</span>}
                   <span style={{ fontSize: 9, color: 'var(--gh-text-4)', fontFamily: 'var(--font-mono)' }}>{timeAgo(msg.created_at)}</span>
                 </div>
-                <div style={{
-                  background: isUser ? 'rgba(88,166,255,0.08)' : 'rgba(22,27,34,0.8)',
-                  border: `1px solid ${isUser ? 'var(--blue-border)' : 'var(--gh-border)'}`,
-                  borderRadius: isUser ? 'var(--r-lg) var(--r-sm) var(--r-lg) var(--r-lg)' : 'var(--r-sm) var(--r-lg) var(--r-lg) var(--r-lg)',
-                  padding: 'var(--sp-3) var(--sp-4)', fontSize: 12.5, color: 'var(--gh-text-1)',
-                  lineHeight: 1.6, backdropFilter: 'blur(8px)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
-                  whiteSpace: 'pre-wrap', wordBreak: 'break-word'
-                }}>
+                <div style={{ background: isUser ? 'rgba(88,166,255,0.08)' : 'rgba(22,27,34,0.8)', border: `1px solid ${isUser ? 'var(--blue-border)' : 'var(--gh-border)'}`, borderRadius: isUser ? 'var(--r-lg) var(--r-sm) var(--r-lg) var(--r-lg)' : 'var(--r-sm) var(--r-lg) var(--r-lg) var(--r-lg)', padding: 'var(--sp-3) var(--sp-4)', fontSize: 12.5, color: 'var(--gh-text-1)', lineHeight: 1.6, backdropFilter: 'blur(8px)', boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
                   {msg.message}
                 </div>
               </div>
@@ -229,18 +211,13 @@ export default function TheHub(): React.JSX.Element {
             <textarea
               className="textarea"
               style={{ flex: 1, minHeight: 44, maxHeight: 120, resize: 'none', lineHeight: 1.5 }}
-              placeholder={settingsLoaded ? `Message ${selectedAgent}...` : 'Loading settings...'}
+              placeholder={loaded ? `Message ${selectedAgent}...` : 'Loading settings...'}
               value={input}
-              disabled={!settingsLoaded}
+              disabled={!loaded}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendMessage() } }}
             />
-            <button
-              className="btn btn-orange"
-              style={{ height: 44, paddingLeft: 'var(--sp-5)', paddingRight: 'var(--sp-5)' }}
-              onClick={sendMessage}
-              disabled={sending || !input.trim() || !settingsLoaded}
-            >
+            <button className="btn btn-orange" style={{ height: 44, paddingLeft: 'var(--sp-5)', paddingRight: 'var(--sp-5)' }} onClick={sendMessage} disabled={sending || !input.trim() || !loaded}>
               {sending ? '...' : 'Send'}
             </button>
           </div>

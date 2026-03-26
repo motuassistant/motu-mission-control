@@ -14,6 +14,7 @@ import CronJobs from './pages/CronJobs'
 import ApiUsage from './pages/ApiUsage'
 import TheHub from './pages/TheHub'
 import { SearchProvider, useSearch } from './lib/SearchContext'
+import { SettingsProvider } from './lib/SettingsContext'
 import './assets/main.css'
 
 const SEARCH_PLACEHOLDERS: Record<string, string> = {
@@ -76,9 +77,11 @@ function AppShell(): React.JSX.Element {
 export default function App(): React.JSX.Element {
   return (
     <Router>
-      <SearchProvider>
-        <AppShell />
-      </SearchProvider>
+      <SettingsProvider>
+        <SearchProvider>
+          <AppShell />
+        </SearchProvider>
+      </SettingsProvider>
     </Router>
   )
 }

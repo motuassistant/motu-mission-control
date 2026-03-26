@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
-import { chat, getSettings } from '../lib/api'
+import { chat } from '../lib/api'
 import { useSearch } from '../lib/SearchContext'
+import { useSettings } from '../lib/SettingsContext'
 
 interface IntelItem {
   id: string; title: string; summary: string
@@ -10,18 +11,16 @@ interface IntelItem {
 const TAG_COLORS = ['tag-blue', 'tag-orange', 'tag-purple', 'tag-teal', 'tag-yellow']
 
 export default function Intelligence(): React.JSX.Element {
-  const [items, setItems]     = useState<IntelItem[]>([])
+  const [items, setItems]   = useState<IntelItem[]>([])
   const [loading, setLoading] = useState(false)
-  const [query2, setQuery2]   = useState('')
-  const [ollamaHost, setOllamaHost] = useState('http://localhost:11434')
-  const [model, setModel]     = useState('llama3')
-  const { query }             = useSearch()
+  const [researchQuery, setResearchQuery] = useState('')
+  const { query }           = useSearch()
+  const { settings }        = useSettings()
+
+  const ollamaHost = settings.ollama_host ?? 'http://localhost:11434'
+  const model      = settings.ollama_model ?? 'llama3'
 
   useEffect(() => {
-    getSettings().then((s) => {
-      if (s.ollama_host) setOllamaHost(s.ollama_host)
-      if (s.ollama_model) setModel(s.ollama_model)
-    }).catch(console.error)
     try {
       const stored = localStorage.getItem('motu-intelligence')
       if (stored) setItems(JSON.parse(stored))
@@ -34,12 +33,12 @@ export default function Intelligence(): React.JSX.Element {
   }
 
   async function research() {
-    if (!query2.trim() || loading) return
+    if (!researchQuery.trim() || loading) return
     setLoading(true)
     try {
       const response = await chat([
         { role: 'system', content: 'You are Motu. Respond ONLY with a valid JSON array, no markdown, no explanation. Structure: [{"title":"string","summary":"string","tags":["tag1"],"source":"string","relevance":85}]' },
-        { role: 'user', content: `Research: ${query2}` }
+        { role: 'user', content: `Research: ${researchQuery}` }
       ], model, ollamaHost)
 
       if (response.message?.content) {
@@ -54,16 +53,15 @@ export default function Intelligence(): React.JSX.Element {
           }))
           save([...newItems, ...items])
         } catch {
-          save([{ id: Date.now() + '_0', title: query2, summary: response.message.content.slice(0, 300), tags: ['research'], source: 'Motu', relevance: 75, created_at: new Date().toISOString() }, ...items])
+          save([{ id: Date.now() + '_0', title: researchQuery, summary: response.message.content.slice(0, 300), tags: ['research'], source: 'Motu', relevance: 75, created_at: new Date().toISOString() }, ...items])
         }
       }
     } catch { /* ignore */ }
-    finally { setLoading(false); setQuery2('') }
+    finally { setLoading(false); setResearchQuery('') }
   }
 
   function removeItem(id: string) { save(items.filter((i) => i.id !== id)) }
 
-  // topbar search filters items
   const filtered = items.filter((item) => {
     if (!query) return true
     const q = query.toLowerCase()
@@ -82,8 +80,8 @@ export default function Intelligence(): React.JSX.Element {
       <div className="glass-card" style={{ padding: 'var(--sp-5)' }}>
         <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--gh-text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 'var(--sp-3)' }}>Ask Motu to Research</div>
         <div style={{ display: 'flex', gap: 'var(--sp-3)' }}>
-          <input className="input" style={{ flex: 1 }} value={query2} onChange={(e) => setQuery2(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && research()} placeholder="e.g. Best practices for RAG pipelines..." />
-          <button className="btn btn-orange" onClick={research} disabled={loading || !query2.trim()}>{loading ? 'Researching...' : '◆ Research'}</button>
+          <input className="input" style={{ flex: 1 }} value={researchQuery} onChange={(e) => setResearchQuery(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && research()} placeholder="e.g. Best practices for RAG pipelines..." />
+          <button className="btn btn-orange" onClick={research} disabled={loading || !researchQuery.trim()}>{loading ? 'Researching...' : '◆ Research'}</button>
         </div>
         <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 'var(--sp-2)' }}>Motu will research the topic and add findings to your intelligence database</div>
       </div>
