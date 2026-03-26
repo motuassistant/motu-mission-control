@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { serve } from '@hono/node-server'
 import { cors } from 'hono/cors'
 import db from './db'
+import { syncCronJob } from './agent-loop'
 
 const app = new Hono()
 
@@ -49,10 +50,10 @@ app.get('/api/agents', (c) => {
 
 app.post('/api/agents', async (c) => {
   const body = await c.req.json()
-  const { name, role, description, avatar = '🤖', color = '#58a6ff' } = body
+  const { name, role, description, avatar = '🤖', color = '#58a6ff', model } = body
   const result = db
-    .prepare('INSERT INTO agents (name, role, description, avatar, color) VALUES (?, ?, ?, ?, ?)')
-    .run(name, role, description, avatar, color)
+    .prepare('INSERT INTO agents (name, role, description, avatar, color, model) VALUES (?, ?, ?, ?, ?, ?)')
+    .run(name, role, description, avatar, color, model ?? null)
   db.prepare('INSERT INTO events (type, text) VALUES (?, ?)').run(
     'success', `New agent "${name}" joined as ${role}`
   )
@@ -62,16 +63,17 @@ app.post('/api/agents', async (c) => {
 app.patch('/api/agents/:id', async (c) => {
   const id = c.req.param('id')
   const body = await c.req.json()
-  const { name, role, description, avatar, color } = body
+  const { name, role, description, avatar, color, model } = body
   db.prepare(`
     UPDATE agents SET
       name        = COALESCE(?, name),
       role        = COALESCE(?, role),
       description = COALESCE(?, description),
       avatar      = COALESCE(?, avatar),
-      color       = COALESCE(?, color)
+      color       = COALESCE(?, color),
+      model       = COALESCE(?, model)
     WHERE id = ?
-  `).run(name ?? null, role ?? null, description ?? null, avatar ?? null, color ?? null, id)
+  `).run(name ?? null, role ?? null, description ?? null, avatar ?? null, color ?? null, model ?? null, id)
   return c.json({ ok: true })
 })
 
@@ -261,6 +263,7 @@ app.post('/api/cron-jobs', async (c) => {
   db.prepare('INSERT INTO events (type, text) VALUES (?, ?)').run(
     'info', `Cron job scheduled: "${name}" at ${schedule}`
   )
+  syncCronJob(Number(result.lastInsertRowid))
   return c.json({ id: result.lastInsertRowid })
 })
 
@@ -281,12 +284,14 @@ app.patch('/api/cron-jobs/:id', async (c) => {
     enabled ?? null, last_run ?? null, next_run ?? null,
     name ?? null, schedule ?? null, description ?? null, id
   )
+  syncCronJob(Number(id))
   return c.json({ ok: true })
 })
 
 app.delete('/api/cron-jobs/:id', (c) => {
   const id = c.req.param('id')
   db.prepare('DELETE FROM cron_jobs WHERE id = ?').run(id)
+  syncCronJob(Number(id))
   return c.json({ ok: true })
 })
 
@@ -426,6 +431,49 @@ app.post('/api/chat', async (c) => {
     return c.json({ error: 'Could not reach Ollama. Is it running on your beefy PC?' }, 503)
   }
 })
+
+// ── Ollama Models ─────────────────────────────────────────
+// Proxies Ollama's /api/tags to get available models.
+// Frontend calls this instead of hitting Ollama directly
+// (avoids CORS issues and keeps the host config server-side).
+app.get('/api/ollama/models', async (c) => {
+  const settings = db.prepare('SELECT * FROM settings').all() as any[]
+  const settingsMap: Record<string, string> = {}
+  settings.forEach((s) => { settingsMap[s.key] = s.value })
+
+  const host = settingsMap.ollama_host ?? 'http://localhost:11434'
+
+  try {
+    const response = await fetch(`${host}/api/tags`)
+    const data = await response.json() as any
+    // data.models is an array of { name, modified_at, size, ... }
+    const models = (data.models ?? []).map((m: any) => m.name as string)
+    return c.json({ models })
+  } catch {
+    return c.json({ models: [], error: 'Could not reach Ollama' })
+  }
+})
+
+// ── Dev: Clear Database ───────────────────────────────────
+// Truncates all user data tables. Keeps settings and the
+// Motu commander agent. Only exposed in dev builds.
+app.post('/api/dev/clear-db', (c) => {
+  db.exec(`
+    DELETE FROM tasks;
+    DELETE FROM commits;
+    DELETE FROM events;
+    DELETE FROM agent_messages;
+    DELETE FROM api_usage;
+    DELETE FROM journal_entries;
+    DELETE FROM clients;
+    DELETE FROM cron_jobs;
+    DELETE FROM agent_status;
+    INSERT OR IGNORE INTO agent_status (id) VALUES (1);
+    DELETE FROM agents WHERE is_commander = 0;
+  `)
+  return c.json({ ok: true })
+})
+
 
 // ── Settings ──────────────────────────────────────────────
 app.get('/api/settings', (c) => {

@@ -16,6 +16,7 @@ db.exec(`
     description  TEXT,
     avatar       TEXT DEFAULT '🤖',
     color        TEXT DEFAULT '#58a6ff',
+    model        TEXT,
     is_commander INTEGER DEFAULT 0,
     created_at   TEXT DEFAULT (datetime('now'))
   );

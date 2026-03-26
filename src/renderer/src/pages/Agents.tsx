@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react'
-import { getAgents, createAgent, updateAgent, deleteAgent, type Agent } from '../lib/api'
+import { getAgents, createAgent, updateAgent, deleteAgent, getSettings, type Agent } from '../lib/api'
 import { useSearch } from '../lib/SearchContext'
+import ModelSelect from './ModelSelect'
 
 const AVATAR_OPTIONS = ['🤖', '🧠', '⚡', '🔬', '🛠️', '📊', '🎯', '🔮', '🌐', '🚀']
 const COLOR_OPTIONS  = ['#58a6ff', '#39d353', '#f78166', '#bc8cff', '#e3b341', '#ff7eb3']
 
-function AgentModal({ agent, onClose, onSave }: {
-  agent?: Agent | null; onClose: () => void
+function AgentModal({ agent, defaultModel, onClose, onSave }: {
+  agent?: Agent | null
+  defaultModel: string
+  onClose: () => void
   onSave: (data: Partial<Agent>) => void
 }): React.JSX.Element {
   const [name, setName]     = useState(agent?.name ?? '')
@@ -14,6 +17,7 @@ function AgentModal({ agent, onClose, onSave }: {
   const [desc, setDesc]     = useState(agent?.description ?? '')
   const [avatar, setAvatar] = useState(agent?.avatar ?? '🤖')
   const [color, setColor]   = useState(agent?.color ?? '#58a6ff')
+  const [model, setModel]   = useState(agent?.model ?? defaultModel)
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
@@ -24,10 +28,31 @@ function AgentModal({ agent, onClose, onSave }: {
         </div>
         <div className="modal-body">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-3)' }}>
-            <div><label className="form-label">Name</label><input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Agent name..." autoFocus /></div>
-            <div><label className="form-label">Role</label><input className="input" value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Architect, Analyst..." /></div>
+            <div>
+              <label className="form-label">Name</label>
+              <input className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="Agent name..." autoFocus />
+            </div>
+            <div>
+              <label className="form-label">Role</label>
+              <input className="input" value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Architect, Analyst..." />
+            </div>
           </div>
-          <div><label className="form-label">Description</label><textarea className="textarea" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What does this agent do?" /></div>
+          <div>
+            <label className="form-label">Description</label>
+            <textarea className="textarea" value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="What does this agent do? This is used as their system prompt in The Hub." />
+          </div>
+          <div>
+            <label className="form-label">Model</label>
+            <ModelSelect
+              value={model}
+              onChange={setModel}
+              placeholder={`Default (${defaultModel})`}
+              fallbackLabel={`Enter model name (default: ${defaultModel})`}
+            />
+            <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 'var(--sp-1)' }}>
+              Override the global model for this agent specifically
+            </div>
+          </div>
           <div>
             <label className="form-label">Avatar</label>
             <div style={{ display: 'flex', gap: 'var(--sp-2)', flexWrap: 'wrap' }}>
@@ -48,7 +73,10 @@ function AgentModal({ agent, onClose, onSave }: {
         <div className="modal-footer">
           <button className="btn btn-ghost" onClick={onClose}>Cancel</button>
           <div className="modal-footer-right">
-            <button className="btn btn-orange" onClick={() => { if (!name.trim() || !role.trim()) return; onSave({ name, role, description: desc, avatar, color }) }}>
+            <button className="btn btn-orange" onClick={() => {
+              if (!name.trim() || !role.trim()) return
+              onSave({ name, role, description: desc, avatar, color, model: model || defaultModel })
+            }}>
               {agent ? 'Save Changes' : 'Create Agent'}
             </button>
           </div>
@@ -59,12 +87,19 @@ function AgentModal({ agent, onClose, onSave }: {
 }
 
 export default function Agents(): React.JSX.Element {
-  const [agents, setAgents] = useState<Agent[]>([])
-  const [modal, setModal]   = useState<Agent | null | undefined>(undefined)
-  const { query }           = useSearch()
+  const [agents, setAgents]             = useState<Agent[]>([])
+  const [modal, setModal]               = useState<Agent | null | undefined>(undefined)
+  const [defaultModel, setDefaultModel] = useState('llama3')
+  const { query }                       = useSearch()
 
   function load() { getAgents().then(setAgents).catch(console.error) }
-  useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    load()
+    getSettings()
+      .then((s) => { if (s.ollama_model) setDefaultModel(s.ollama_model) })
+      .catch(console.error)
+  }, [])
 
   async function handleSave(data: Partial<Agent>) {
     if (modal?.id) await updateAgent(modal.id, data)
@@ -89,7 +124,9 @@ export default function Agents(): React.JSX.Element {
       <div className="page-header">
         <div>
           <div className="page-title">Agents</div>
-          <div className="page-subtitle">{filtered.length} agent{filtered.length !== 1 ? 's' : ''}{query ? ` matching "${query}"` : ''}</div>
+          <div className="page-subtitle">
+            {filtered.length} agent{filtered.length !== 1 ? 's' : ''}{query ? ` matching "${query}"` : ''}
+          </div>
         </div>
         <button className="btn btn-orange" onClick={() => setModal(null)}>+ New Agent</button>
       </div>
@@ -99,7 +136,9 @@ export default function Agents(): React.JSX.Element {
           <div key={agent.id} className={`glass-card anim-in-${Math.min(idx + 1, 4)}`} style={{ padding: 'var(--sp-5)' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 'var(--sp-4)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--sp-3)' }}>
-                <div style={{ width: 42, height: 42, borderRadius: 'var(--r-lg)', background: `linear-gradient(135deg, ${agent.color}22, ${agent.color}08)`, border: `1px solid ${agent.color}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, boxShadow: `0 0 12px ${agent.color}22` }}>{agent.avatar}</div>
+                <div style={{ width: 42, height: 42, borderRadius: 'var(--r-lg)', background: `linear-gradient(135deg, ${agent.color}22, ${agent.color}08)`, border: `1px solid ${agent.color}33`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, boxShadow: `0 0 12px ${agent.color}22` }}>
+                  {agent.avatar}
+                </div>
                 <div>
                   <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>{agent.name}</div>
                   <div style={{ fontSize: 10, color: agent.color, fontWeight: 600, marginTop: 2 }}>{agent.role}</div>
@@ -114,8 +153,22 @@ export default function Agents(): React.JSX.Element {
                 </div>
               )}
             </div>
-            {agent.description && <p style={{ fontSize: 11.5, color: 'var(--gh-text-2)', lineHeight: 1.5, marginBottom: 'var(--sp-3)' }}>{agent.description}</p>}
-            <div style={{ fontSize: 10, color: 'var(--gh-text-4)', fontFamily: 'var(--font-mono)' }}>Added {new Date(agent.created_at).toLocaleDateString()}</div>
+
+            {agent.description && (
+              <p style={{ fontSize: 11.5, color: 'var(--gh-text-2)', lineHeight: 1.5, marginBottom: 'var(--sp-3)' }}>
+                {agent.description}
+              </p>
+            )}
+
+            {/* Model badge */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 'var(--sp-2)' }}>
+              <div style={{ fontSize: 10, color: 'var(--gh-text-4)', fontFamily: 'var(--font-mono)' }}>
+                Added {new Date(agent.created_at).toLocaleDateString()}
+              </div>
+              <span style={{ fontSize: 9, fontFamily: 'var(--font-mono)', color: 'var(--gh-purple)', background: 'var(--purple-soft)', border: '1px solid var(--purple-border)', padding: '2px 7px', borderRadius: 'var(--r-full)' }}>
+                {agent.model ?? defaultModel}
+              </span>
+            </div>
           </div>
         ))}
       </div>
@@ -123,11 +176,20 @@ export default function Agents(): React.JSX.Element {
       {filtered.length === 0 && (
         <div className="empty-state">
           <span className="empty-icon">◉</span>
-          <span className="empty-text">{query ? `No agents matching "${query}"` : 'Only Motu exists. Add sub-agents to expand capabilities.'}</span>
+          <span className="empty-text">
+            {query ? `No agents matching "${query}"` : 'Only Motu exists. Add sub-agents to expand capabilities.'}
+          </span>
         </div>
       )}
 
-      {modal !== undefined && <AgentModal agent={modal} onClose={() => setModal(undefined)} onSave={handleSave} />}
+      {modal !== undefined && (
+        <AgentModal
+          agent={modal}
+          defaultModel={defaultModel}
+          onClose={() => setModal(undefined)}
+          onSave={handleSave}
+        />
+      )}
     </div>
   )
 }

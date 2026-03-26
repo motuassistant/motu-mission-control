@@ -1,25 +1,73 @@
 import { useState, useEffect } from 'react'
-import { getUsage, getSettings, updateSettings, type ApiUsage, type UsageTotals, type ModelStat } from '../lib/api'
+import { getUsage, getSettings, updateSettings, getOllamaModels, clearDb, type ApiUsage, type UsageTotals, type ModelStat } from '../lib/api'
 
 export default function ApiUsage(): React.JSX.Element {
-  const [rows, setRows]           = useState<ApiUsage[]>([])
-  const [totals, setTotals]       = useState<UsageTotals | null>(null)
-  const [byModel, setByModel]     = useState<ModelStat[]>([])
-  const [ollamaHost, setOllamaHost] = useState('')
-  const [model, setModel]         = useState('')
-  const [saved, setSaved]         = useState(false)
+  const [rows, setRows]               = useState<ApiUsage[]>([])
+  const [totals, setTotals]           = useState<UsageTotals | null>(null)
+  const [byModel, setByModel]         = useState<ModelStat[]>([])
+  const [ollamaHost, setOllamaHost]   = useState('')
+  const [model, setModel]             = useState('')
+  const [availableModels, setAvailableModels] = useState<string[]>([])
+  const [modelsLoading, setModelsLoading]     = useState(false)
+  const [modelsError, setModelsError]         = useState('')
+  const [saved, setSaved]             = useState(false)
+  const [clearing, setClearing]       = useState(false)
+  const [clearConfirm, setClearConfirm] = useState(false)
 
   function load() {
-    getUsage().then(({ rows: r, totals: t, byModel: m }) => { setRows(r); setTotals(t); setByModel(m) }).catch(console.error)
-    getSettings().then((s) => { setOllamaHost(s.ollama_host ?? ''); setModel(s.ollama_model ?? '') }).catch(console.error)
+    getUsage().then(({ rows: r, totals: t, byModel: m }) => {
+      setRows(r); setTotals(t); setByModel(m)
+    }).catch(console.error)
+    getSettings().then((s) => {
+      setOllamaHost(s.ollama_host ?? '')
+      setModel(s.ollama_model ?? '')
+    }).catch(console.error)
   }
 
   useEffect(() => { load() }, [])
+
+  async function fetchModels() {
+    setModelsLoading(true)
+    setModelsError('')
+    try {
+      const { models, error } = await getOllamaModels()
+      if (error) {
+        setModelsError('Could not reach Ollama — is your beefy PC on?')
+        setAvailableModels([])
+      } else {
+        setAvailableModels(models)
+      }
+    } catch {
+      setModelsError('Could not reach Ollama — is your beefy PC on?')
+      setAvailableModels([])
+    } finally {
+      setModelsLoading(false)
+    }
+  }
+
+  // Auto-fetch models when host changes, debounced
+  useEffect(() => {
+    if (!ollamaHost) return
+    const t = setTimeout(fetchModels, 800)
+    return () => clearTimeout(t)
+  }, [ollamaHost])
 
   async function saveSettings() {
     await updateSettings({ ollama_host: ollamaHost, ollama_model: model })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
+  }
+
+  async function handleClearDb() {
+    if (!clearConfirm) { setClearConfirm(true); return }
+    setClearing(true)
+    try {
+      await clearDb()
+      setClearConfirm(false)
+      load()
+    } finally {
+      setClearing(false)
+    }
   }
 
   return (
@@ -34,9 +82,9 @@ export default function ApiUsage(): React.JSX.Element {
       {/* Totals */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 'var(--sp-4)' }}>
         {[
-          { label: 'Total Calls',  value: totals?.total_calls ?? 0,  color: 'var(--gh-blue)',   mono: true },
-          { label: 'Total Tokens', value: (totals?.total_tokens ?? 0).toLocaleString(), color: 'var(--gh-purple)', mono: true },
-          { label: 'Est. Cost',    value: `$${(totals?.total_cost ?? 0).toFixed(4)}`,  color: 'var(--gh-teal)',   mono: true }
+          { label: 'Total Calls',  value: totals?.total_calls ?? 0,                    color: 'var(--gh-blue)'   },
+          { label: 'Total Tokens', value: (totals?.total_tokens ?? 0).toLocaleString(), color: 'var(--gh-purple)' },
+          { label: 'Est. Cost',    value: `$${(totals?.total_cost ?? 0).toFixed(4)}`,   color: 'var(--gh-teal)'   }
         ].map((s) => (
           <div key={s.label} className="glass-card anim-in" style={{ padding: 'var(--sp-5)' }}>
             <div style={{ fontSize: 10, color: 'var(--gh-text-4)', textTransform: 'uppercase', letterSpacing: '0.1em', fontWeight: 700, marginBottom: 6 }}>{s.label}</div>
@@ -51,8 +99,7 @@ export default function ApiUsage(): React.JSX.Element {
           <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 'var(--sp-4)' }}>Usage by Model</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-3)' }}>
             {byModel.map((m) => {
-              const maxTokens = byModel[0]?.tokens ?? 1
-              const pct = Math.round((m.tokens / maxTokens) * 100)
+              const pct = Math.round((m.tokens / (byModel[0]?.tokens ?? 1)) * 100)
               return (
                 <div key={m.model}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
@@ -69,17 +116,54 @@ export default function ApiUsage(): React.JSX.Element {
         </div>
       )}
 
-      {/* Settings */}
+      {/* Ollama Settings */}
       <div className="glass-card anim-in-3" style={{ padding: 'var(--sp-5)' }}>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 'var(--sp-4)' }}>Ollama Settings</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--sp-4)', marginBottom: 'var(--sp-4)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--sp-4)', marginBottom: 'var(--sp-4)' }}>
+
           <div>
             <label className="form-label">Ollama Host (beefy PC IP)</label>
             <input className="input" style={{ fontFamily: 'var(--font-mono)' }} value={ollamaHost} onChange={(e) => setOllamaHost(e.target.value)} placeholder="http://192.168.1.100:11434" />
           </div>
           <div>
-            <label className="form-label">Model</label>
-            <input className="input" style={{ fontFamily: 'var(--font-mono)' }} value={model} onChange={(e) => setModel(e.target.value)} placeholder="llama3" />
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 'var(--sp-2)' }}>
+              <label className="form-label" style={{ margin: 0 }}>Global Model</label>
+              <button
+                className="btn btn-ghost"
+                style={{ fontSize: 10, padding: '3px 8px' }}
+                onClick={fetchModels}
+                disabled={modelsLoading}
+              >
+                {modelsLoading ? 'Loading...' : '⟳ Refresh'}
+              </button>
+            </div>
+
+            {availableModels.length > 0 ? (
+              <select className="select" value={model} onChange={(e) => setModel(e.target.value)}>
+                {availableModels.map((m) => (
+                  <option key={m} value={m}>{m}</option>
+                ))}
+              </select>
+            ) : (
+              <input
+                className="input"
+                style={{ fontFamily: 'var(--font-mono)' }}
+                value={model}
+                onChange={(e) => setModel(e.target.value)}
+                placeholder="llama3"
+              />
+            )}
+
+            {modelsError && (
+              <div style={{ fontSize: 10, color: 'var(--gh-orange)', marginTop: 'var(--sp-1)' }}>
+                {modelsError} — enter model name manually above.
+              </div>
+            )}
+            {availableModels.length > 0 && (
+              <div style={{ fontSize: 10, color: 'var(--gh-text-4)', marginTop: 'var(--sp-1)' }}>
+                {availableModels.length} model{availableModels.length !== 1 ? 's' : ''} available on {ollamaHost}
+              </div>
+            )}
           </div>
         </div>
         <button className={`btn ${saved ? 'btn-teal' : 'btn-orange'}`} onClick={saveSettings}>
@@ -122,6 +206,36 @@ export default function ApiUsage(): React.JSX.Element {
       {rows.length === 0 && totals?.total_calls === 0 && (
         <div className="empty-state"><span className="empty-icon">▲</span><span className="empty-text">No API calls yet. Chat with Motu in The Hub to see usage here.</span></div>
       )}
+
+      {/* Dev Tools */}
+      <div className="glass-card" style={{ padding: 'var(--sp-5)', borderColor: 'var(--orange-border)' }}>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 'var(--sp-4)' }}>
+          <div>
+            <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 4 }}>Developer Tools</div>
+            <div style={{ fontSize: 11, color: 'var(--gh-text-3)', lineHeight: 1.6 }}>
+              Clears all tasks, events, commits, messages, journal entries, cron jobs, and API usage logs.
+              Keeps your settings and the Motu commander agent.
+              <br />
+              <span style={{ color: 'var(--gh-orange)', fontWeight: 600 }}>This cannot be undone.</span>
+            </div>
+          </div>
+          <div style={{ display: 'flex', gap: 'var(--sp-2)', flexShrink: 0, alignItems: 'center' }}>
+            {clearConfirm && (
+              <button className="btn btn-ghost" onClick={() => setClearConfirm(false)}>
+                Cancel
+              </button>
+            )}
+            <button
+              className="btn btn-red"
+              onClick={handleClearDb}
+              disabled={clearing}
+              style={{ minWidth: 130 }}
+            >
+              {clearing ? 'Clearing...' : clearConfirm ? '⚠ Confirm Clear' : 'Clear Database'}
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }

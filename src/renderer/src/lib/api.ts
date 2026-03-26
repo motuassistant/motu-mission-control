@@ -110,10 +110,19 @@ export const chat = (messages: ChatMessage[], model?: string, ollamaHost?: strin
     body: JSON.stringify({ messages, model, ollamaHost })
   })
 
+
+// ── Ollama Models ─────────────────────────────────────────
+export const getOllamaModels = () =>
+  request<{ models: string[]; error?: string }>('/api/ollama/models')
+
+// ── Dev ───────────────────────────────────────────────────
+export const clearDb = () =>
+  request('/api/dev/clear-db', { method: 'POST' })
+
 // ── Types ─────────────────────────────────────────────────
 export interface Agent {
   id: number; name: string; role: string; description: string
-  avatar: string; color: string; is_commander: number; created_at: string
+  avatar: string; color: string; model?: string; is_commander: number; created_at: string
 }
 
 export interface AgentStatus {

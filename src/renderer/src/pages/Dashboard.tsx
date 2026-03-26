@@ -6,7 +6,8 @@ import {
 } from '../lib/api'
 
 function timeAgo(d: string): string {
-  const diff = Date.now() - new Date(d).getTime()
+  const date = new Date(d.includes('T') ? d : d.replace(' ', 'T') + 'Z')
+  const diff = Date.now() - date.getTime()
   const m = Math.floor(diff / 60000)
   if (m < 1) return 'just now'
   if (m < 60) return `${m}m ago`
