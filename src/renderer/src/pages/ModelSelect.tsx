@@ -15,8 +15,17 @@ export default function ModelSelect({ value, onChange, placeholder = 'Select a m
   useEffect(() => {
     getOllamaModels()
       .then(({ models: m, error: e }) => {
-        if (e || m.length === 0) setError(true)
-        else setModels(m)
+        if (e || m.length === 0) {
+          setError(true)
+        } else {
+          setModels(m)
+          // Auto-select first model if current value isn't in the list.
+          // Handles mismatches like "llama3" vs "llama3:latest" and the
+          // single-model case where the select would otherwise show blank.
+          if (!value || !m.includes(value)) {
+            onChange(m[0])
+          }
+        }
         setLoading(false)
       })
       .catch(() => { setError(true); setLoading(false) })

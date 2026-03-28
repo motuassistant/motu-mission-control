@@ -1,4 +1,4 @@
-import cron from 'node-cron'
+import cron, { type ScheduledTask } from 'node-cron'
 import db from './db'
 
 // ── Ollama reasoning loop ─────────────────────────────────
@@ -137,7 +137,7 @@ export function startAgentLoop(): void {
 // We keep a map so we can stop/restart them when jobs are
 // toggled or their schedule changes — without restarting the app.
 
-const activeCronTasks = new Map<number, cron.ScheduledTask>()
+const activeCronTasks = new Map<number, ScheduledTask>()
 
 function scheduleCronJob(job: any): void {
   // Stop existing task for this job if there is one

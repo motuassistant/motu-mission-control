@@ -43,6 +43,10 @@ export default function ApiUsage(): React.JSX.Element {
         setAvailableModels([])
       } else {
         setAvailableModels(m)
+        // If current model value isn't in the fetched list, auto-select first.
+        if (!model || !m.includes(model)) {
+          setModel(m[0])
+        }
       }
     } catch {
       setModelsError('Could not reach Ollama — is your beefy PC on?')
